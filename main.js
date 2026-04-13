@@ -1,0 +1,48 @@
+/**
+ * File: main.js
+ * Description: Main entry file that initializes and starts the Canvas To API proxy server system
+ *
+ * Author: iBUHUB
+ */
+
+// Load environment variables based on NODE_ENV
+const path = require("path");
+const envFile = process.env.NODE_ENV === "production" ? ".env" : ".env.development";
+require("dotenv").config({ path: path.resolve(__dirname, envFile) });
+
+const ProxyServerSystem = require("./src/core/ProxyServerSystem");
+
+/**
+ * Initialize and start the server
+ */
+const initializeServer = async () => {
+    try {
+        const serverSystem = new ProxyServerSystem();
+        await serverSystem.start();
+
+        // Handle graceful shutdown
+        const shutdownHandler = async signal => {
+            console.log(`\n${signal} received, shutting down gracefully...`);
+            try {
+                await serverSystem.shutdown();
+                process.exit(0);
+            } catch (error) {
+                console.error("Error during shutdown:", error);
+                process.exit(1);
+            }
+        };
+
+        process.on("SIGTERM", () => shutdownHandler("SIGTERM"));
+        process.on("SIGINT", () => shutdownHandler("SIGINT"));
+    } catch (error) {
+        console.error("❌ Server startup failed:", error.message);
+        process.exit(1);
+    }
+};
+
+// If this file is run directly, start the server
+if (require.main === module) {
+    initializeServer();
+}
+
+module.exports = { initializeServer, ProxyServerSystem };
