@@ -21,18 +21,35 @@ function normalizeUsage(record = null) {
     };
 }
 
+function toDisplayModelId(value) {
+    const text = String(value || "").trim();
+    if (!text) {
+        return text;
+    }
+
+    const parts = text.split("::");
+    return parts[parts.length - 1] || text;
+}
+
 function buildModelsList(models) {
     const created = Math.floor(Date.now() / 1000);
 
     return {
         data: models.map(model => ({
             created,
-            id: model.value,
+            id: toDisplayModelId(model.value),
             object: "model",
             owned_by: model?.attr?.providerName || "ai8",
         })),
         object: "list",
     };
+}
+
+function buildAdminModelsList(models) {
+    return models.map(model => ({
+        ...model,
+        display_value: toDisplayModelId(model?.value || ""),
+    }));
 }
 
 function buildChatCompletion({ content, created, id, images = [], metadata = null, model, usage }) {
@@ -87,22 +104,30 @@ function buildChatCompletionChunk({ created, delta = {}, finishReason = null, id
     return chunk;
 }
 
-function buildErrorPayload(status, message, type = "invalid_request_error", code = null) {
+function buildErrorPayload(status, message, type = "invalid_request_error", code = null, details = null) {
+    const error = {
+        code: code || String(status || 500),
+        message,
+        param: null,
+        type,
+    };
+
+    if (details && typeof details === "object") {
+        error.details = details;
+    }
+
     return {
-        error: {
-            code: code || String(status || 500),
-            message,
-            param: null,
-            type,
-        },
+        error,
     };
 }
 
 module.exports = {
+    buildAdminModelsList,
     buildChatCompletion,
     buildChatCompletionChunk,
     buildErrorPayload,
     buildModelsList,
     normalizeUsage,
     randomId,
+    toDisplayModelId,
 };

@@ -195,7 +195,7 @@ async function loadModels(forceRefresh) {
         elements.modelsMeta.textContent = `已加载 ${models.length} 个模型，当前默认模型：${payload.default_model || "-"}`;
         elements.modelsList.innerHTML = models
             .map(model => {
-                const value = escapeHtml(model.value || "");
+                const value = escapeHtml(model.display_value || model.value || "");
                 const provider = escapeHtml(model?.attr?.providerName || "ai8");
                 return `<span class="tag">${value}<small>${provider}</small></span>`;
             })
@@ -298,8 +298,18 @@ function renderExample() {
     elements.exampleOutput.textContent = [
         `curl ${openaiBaseUrl}/chat/completions \\`,
         authLine + '  -H "Content-Type: application/json" \\',
-        `  -d '{"model":"${config.ai8DefaultModel || "openai_chat::gpt-4.1-mini"}","messages":[{"role":"user","content":"请回复 OK"}]}'`,
+        `  -d '{"model":"${toDisplayModelId(config.ai8DefaultModel || "openai_chat::gpt-4.1-mini")}","messages":[{"role":"user","content":"请回复 OK"}]}'`,
     ].join("\n");
+}
+
+function toDisplayModelId(value) {
+    const text = String(value || "").trim();
+    if (!text) {
+        return text;
+    }
+
+    const parts = text.split("::");
+    return parts[parts.length - 1] || text;
 }
 
 function resetRuntimePanels() {

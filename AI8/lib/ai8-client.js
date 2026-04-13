@@ -367,11 +367,63 @@ class AI8Client {
             source?.error?.message ||
             `AI8 request failed with status ${status}`;
 
-        const error = this._buildError(message, status);
+        const error = this._buildError(message, this._resolveErrorStatus(source, status, message));
         if (source?.code !== undefined) {
             error.code = source.code;
         }
+        if (source && typeof source === "object") {
+            error.upstream = source;
+        }
         return error;
+    }
+
+    _resolveErrorStatus(source, status, message) {
+        const numericStatus = Number(status);
+        if (Number.isFinite(numericStatus) && numericStatus >= 400) {
+            return numericStatus;
+        }
+
+        const text = String(message || "").trim().toLowerCase();
+        if (!text) {
+            return 502;
+        }
+
+        if (
+            text.includes("授权登陆已过期") ||
+            text.includes("重新登陆") ||
+            text.includes("重新登录") ||
+            text.includes("login expired") ||
+            text.includes("token expired") ||
+            text.includes("unauthorized")
+        ) {
+            return 401;
+        }
+
+        if (text.includes("无权限") || text.includes("forbidden") || text.includes("permission denied")) {
+            return 403;
+        }
+
+        if (
+            text.includes("rate limit") ||
+            text.includes("too many requests") ||
+            text.includes("请求过于频繁") ||
+            text.includes("频率过高")
+        ) {
+            return 429;
+        }
+
+        if (
+            text.includes("invalid") ||
+            text.includes("参数") ||
+            text.includes("格式") ||
+            text.includes("not found") ||
+            text.includes("不存在") ||
+            text.includes("ambiguous")
+        ) {
+            return 400;
+        }
+
+        return 502;
     }
 
     _buildError(message, status = 500) {

@@ -10,18 +10,21 @@ const packageJson = require("./package.json");
 const AI8Client = require("./lib/ai8-client");
 const RuntimeConfigStore = require("./lib/runtime-config");
 const RuntimeLogger = require("./lib/runtime-logger");
+const { resolveSessionPrompt } = require("./lib/request-prompt");
 const {
     contentPartToAi8File,
     extractAi8Images,
     isProbablyImageFile,
 } = require("./lib/media-utils");
 const {
+    buildAdminModelsList,
     buildChatCompletion,
     buildChatCompletionChunk,
     buildErrorPayload,
     buildModelsList,
     normalizeUsage,
     randomId,
+    toDisplayModelId,
 } = require("./lib/openai-format");
 
 const APP_NAME = "ai8-adapter";
@@ -123,8 +126,8 @@ app.get("/admin/api/models", requireAdminAuth, asyncHandler(async (req, res) => 
 
     res.json({
         count: models.length,
-        data: models,
-        default_model: getConfig().ai8DefaultModel,
+        data: buildAdminModelsList(models),
+        default_model: toDisplayModelId(getConfig().ai8DefaultModel),
         object: "list",
         openai: buildModelsList(models),
     });
@@ -157,7 +160,7 @@ app.post("/admin/api/test-upstream", requireAdminAuth, asyncHandler(async (req, 
         sample_models: models.slice(0, 20).map(model => ({
             label: model?.label || model?.value || "",
             provider: model?.attr?.providerName || "ai8",
-            value: model?.value || "",
+            value: toDisplayModelId(model?.value || ""),
         })),
         upstream_ready: Boolean(config.ai8AuthToken),
     });
@@ -238,6 +241,7 @@ app.post("/v1/chat/completions", asyncHandler(async (req, res) => {
         injectSystemPromptOnReuse: config.ai8ReuseSessionInjectSystemPrompt,
         mediaFetchTimeoutMs: config.mediaFetchTimeoutMs,
     });
+    const sessionPrompt = resolveSessionPrompt(body, preparedMessages);
     const created = Math.floor(Date.now() / 1000);
     const completionId = randomId("chatcmpl");
     const thinking = resolveThinking(req, body, config.ai8DefaultThinking);
@@ -246,10 +250,13 @@ app.post("/v1/chat/completions", asyncHandler(async (req, res) => {
     const session = await client.createSession({
         maxToken: body.max_tokens,
         model: resolvedModel.value,
+        prompt: sessionPrompt.value,
         temperature: body.temperature,
     });
 
     res.setHeader("x-ai8-session-id", String(session.id));
+    res.setHeader("x-ai8-session-prompt-source", String(sessionPrompt.source || "none"));
+    res.setHeader("x-ai8-session-prompt-present", sessionPrompt.value ? "true" : "false");
 
     if (body.stream) {
         await handleStreamingChatCompletion(req, res, {
@@ -277,7 +284,6 @@ app.post("/v1/chat/completions", asyncHandler(async (req, res) => {
             files: preparedMessages.files,
             sessionId: session.id,
             signal: abortController.signal,
-            systemPrompt: preparedMessages.systemPrompt,
             text: preparedMessages.text,
             thinking,
         },
@@ -345,7 +351,15 @@ app.use((error, req, res, next) => {
 
     res
         .status(status)
-        .json(buildErrorPayload(status, message, status >= 500 ? "server_error" : "invalid_request_error"));
+        .json(
+            buildErrorPayload(
+                status,
+                message,
+                status === 401 ? "authentication_error" : status >= 500 ? "server_error" : "invalid_request_error",
+                normalizedError.code,
+                normalizedError.details
+            )
+        );
 });
 
 const port = getConfig().port;
@@ -403,7 +417,6 @@ async function handleStreamingChatCompletion(req, res, options) {
                 files: preparedMessages.files,
                 sessionId,
                 signal: abortController.signal,
-                systemPrompt: preparedMessages.systemPrompt,
                 text: preparedMessages.text,
                 thinking,
             },
@@ -664,7 +677,7 @@ function buildRuntimeSnapshot(req) {
         config: {
             ai8_base_url: config.ai8BaseUrl,
             ai8_delete_session_after_response: config.ai8DeleteSessionAfterResponse,
-            ai8_default_model: config.ai8DefaultModel,
+            ai8_default_model: toDisplayModelId(config.ai8DefaultModel),
             ai8_request_timeout_ms: config.ai8RequestTimeoutMs,
             ai8_reuse_session_inject_system_prompt: config.ai8ReuseSessionInjectSystemPrompt,
             ai8_use_shared_session: config.ai8UseSharedSession,
@@ -694,7 +707,7 @@ function buildEffectiveConfigSummary(config) {
         ai8_auth_configured: Boolean(config.ai8AuthToken),
         ai8_base_url: config.ai8BaseUrl,
         ai8_delete_session_after_response: config.ai8DeleteSessionAfterResponse,
-        ai8_default_model: config.ai8DefaultModel,
+        ai8_default_model: toDisplayModelId(config.ai8DefaultModel),
         ai8_request_timeout_ms: config.ai8RequestTimeoutMs,
         ai8_reuse_session_inject_system_prompt: config.ai8ReuseSessionInjectSystemPrompt,
         ai8_use_shared_session: config.ai8UseSharedSession,
@@ -1129,6 +1142,8 @@ function normalizeRequestError(error) {
         (status >= 500 ? "Unexpected server error." : "Request failed.");
 
     return {
+        code: error?.code || null,
+        details: error?.upstream || null,
         message,
         status,
     };
