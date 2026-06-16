@@ -22,6 +22,7 @@ const {
     buildChatCompletion,
     buildChatCompletionChunk,
     buildErrorPayload,
+    buildImageGeneration,
     buildModelsList,
     normalizeUsage,
     randomId,
@@ -59,7 +60,7 @@ app.get("/", (req, res) => {
     const runtime = buildRuntimeSnapshot(req);
     res.json({
         admin_path: "/admin",
-        endpoints: ["/health", "/admin", "/admin/api/runtime", "/v1/models", "/v1/chat/completions", "/ai8/sessions", "/ai8/records/:sessionId"],
+        endpoints: ["/health", "/admin", "/admin/api/runtime", "/v1/models", "/v1/chat/completions", "/v1/images/generations", "/v1/images/edits", "/ai8/sessions", "/ai8/records/:sessionId"],
         name: APP_NAME,
         runtime,
         status: "ok",
@@ -335,6 +336,141 @@ app.post("/v1/chat/completions", asyncHandler(async (req, res) => {
 
     if (config.ai8DeleteSessionAfterResponse && isEphemeralSession) {
         scheduleSessionDeletion(client, session.id, "non_stream_response");
+    }
+}));
+
+app.post("/v1/images/generations", asyncHandler(async (req, res) => {
+    const body = req.body || {};
+    const config = getConfig();
+    const client = getClient();
+    const created = Math.floor(Date.now() / 1000);
+
+    const requestModel = String(body.model || config.ai8DefaultModel).trim();
+    const resolvedModel = await client.resolveModel(requestModel);
+    
+    // Construct a single message for image generation
+    const messages = [{ role: "user", content: body.prompt }];
+    const preparedMessages = await prepareMessages(messages, false, {
+        mediaFetchTimeoutMs: config.mediaFetchTimeoutMs,
+    });
+    
+    const sessionPrompt = resolveSessionPrompt(body, preparedMessages);
+    let session = await client.createSession({
+        model: resolvedModel.value,
+        prompt: sessionPrompt.value,
+        temperature: body.temperature,
+    });
+
+    if (sessionPrompt.value) {
+        session = await client.updateSession(session, {
+            prompt: sessionPrompt.value,
+        });
+    }
+
+    const abortController = new AbortController();
+    req.on("close", () => abortController.abort());
+
+    let content = "";
+    let finalRecord = null;
+
+    const streamResult = await client.streamChatCompletion(
+        {
+            files: preparedMessages.files,
+            sessionId: session.id,
+            signal: abortController.signal,
+            text: preparedMessages.text,
+        },
+        {
+            onObject(record) {
+                finalRecord = record;
+                if (typeof record?.aiText === "string" && record.aiText) {
+                    content = record.aiText;
+                }
+            },
+            onText(chunk) {
+                content += chunk;
+            },
+        }
+    );
+
+    const finalContent = resolveFinalContent(finalRecord || streamResult?.record, content);
+    const images = extractAi8Images(finalContent);
+
+    res.json(buildImageGeneration({ created, images }));
+
+    if (config.ai8DeleteSessionAfterResponse) {
+        scheduleSessionDeletion(client, session.id, "image_generation");
+    }
+}));
+
+app.post("/v1/images/edits", asyncHandler(async (req, res) => {
+    // OpenAI edits usually uses multipart. 
+    // If the body is JSON (e.g. from an adapter-aware client), we handle it.
+    // Otherwise we return 400 for now as we don't have multer.
+    const body = req.body || {};
+    if (req.headers["content-type"]?.includes("multipart/form-data")) {
+        throw createHttpError(400, "Multipart/form-data not supported yet. Please send as JSON with base64 images.");
+    }
+
+    const config = getConfig();
+    const client = getClient();
+    const created = Math.floor(Date.now() / 1000);
+
+    const requestModel = String(body.model || config.ai8DefaultModel).trim();
+    const resolvedModel = await client.resolveModel(requestModel);
+
+    // Prepare files (image and mask if present)
+    const files = [];
+    if (body.image) {
+        files.push(await contentPartToAi8File({ type: "input_image", data: body.image }, { prefix: "image" }));
+    }
+    if (body.mask) {
+        files.push(await contentPartToAi8File({ type: "input_image", data: body.mask }, { prefix: "mask" }));
+    }
+
+    const preparedMessages = {
+        files,
+        text: body.prompt || "Edit this image per instructions.",
+    };
+
+    let session = await client.createSession({
+        model: resolvedModel.value,
+        temperature: body.temperature,
+    });
+
+    const abortController = new AbortController();
+    req.on("close", () => abortController.abort());
+
+    let content = "";
+    let finalRecord = null;
+
+    const streamResult = await client.streamChatCompletion(
+        {
+            files: preparedMessages.files,
+            sessionId: session.id,
+            signal: abortController.signal,
+            text: preparedMessages.text,
+        },
+        {
+            onObject(record) {
+                finalRecord = record;
+                if (typeof record?.aiText === "string" && record.aiText) {
+                    content = record.aiText;
+                }
+            },
+            onText(chunk) {
+                content += chunk;
+            },
+        }
+    );
+
+    const finalContent = resolveFinalContent(finalRecord || streamResult?.record, content);
+    const images = extractAi8Images(finalContent);
+
+    res.json(buildImageGeneration({ created, images }));
+
+    if (config.ai8DeleteSessionAfterResponse) {
+        scheduleSessionDeletion(client, session.id, "image_edit");
     }
 }));
 
@@ -1192,6 +1328,15 @@ function asyncHandler(handler) {
     return (req, res, next) => {
         Promise.resolve(handler(req, res, next)).catch(next);
     };
+}
+
+function isImageModel(modelId, config) {
+    const displayId = toDisplayModelId(modelId);
+    const configuredModels = config.ai8ImageModels || [];
+    return configuredModels.some(m => 
+        displayId.toLowerCase() === m.toLowerCase() || 
+        modelId.toLowerCase() === m.toLowerCase()
+    );
 }
 
 function registerProcessLogging() {

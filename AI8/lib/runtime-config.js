@@ -20,6 +20,7 @@ const EDITABLE_FIELDS = [
     "mediaFetchTimeoutMs",
     "publicBaseUrl",
     "requestBodyLimit",
+    "ai8ImageModels",
 ];
 
 class RuntimeConfigStore {
@@ -91,6 +92,7 @@ class RuntimeConfigStore {
             mediaFetchTimeoutMs: this.runtimeConfig.mediaFetchTimeoutMs,
             publicBaseUrl: this.runtimeConfig.publicBaseUrl,
             requestBodyLimit: this.runtimeConfig.requestBodyLimit,
+            ai8ImageModels: this.runtimeConfig.ai8ImageModels.join(","),
         };
     }
 
@@ -125,6 +127,7 @@ class RuntimeConfigStore {
             port: process.env.PORT,
             publicBaseUrl: process.env.PUBLIC_BASE_URL,
             requestBodyLimit: process.env.REQUEST_BODY_LIMIT,
+            ai8ImageModels: process.env.AI8_IMAGE_MODELS,
             ...defaults,
         };
     }
@@ -198,6 +201,7 @@ function normalizeConfig(source = {}) {
         port: parseNumber(source.port ?? source.PORT, 7862),
         publicBaseUrl: normalizeString(source.publicBaseUrl || source.PUBLIC_BASE_URL),
         requestBodyLimit: normalizeString(source.requestBodyLimit || source.REQUEST_BODY_LIMIT || "50mb"),
+        ai8ImageModels: parseCsv(source.ai8ImageModels ?? source.AI8_IMAGE_MODELS ?? "gpt-image-1,gpt-image-2,dall-e-3"),
     };
 }
 

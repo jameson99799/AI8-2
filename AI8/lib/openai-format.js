@@ -104,6 +104,18 @@ function buildChatCompletionChunk({ created, delta = {}, finishReason = null, id
     return chunk;
 }
 
+function buildImageGeneration({ created, images = [] }) {
+    return {
+        created: created || Math.floor(Date.now() / 1000),
+        data: images.map(img => {
+            if (img.url && img.url.startsWith("data:")) {
+                return { b64_json: img.url.split(",")[1] };
+            }
+            return { url: img.url };
+        }),
+    };
+}
+
 function buildErrorPayload(status, message, type = "invalid_request_error", code = null, details = null) {
     const error = {
         code: code || String(status || 500),
@@ -126,6 +138,7 @@ module.exports = {
     buildChatCompletion,
     buildChatCompletionChunk,
     buildErrorPayload,
+    buildImageGeneration,
     buildModelsList,
     normalizeUsage,
     randomId,
