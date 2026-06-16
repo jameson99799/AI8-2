@@ -1356,15 +1356,17 @@ function isImageModel(modelId, config) {
 }
 
 /**
- * A basic multipart/form-data parser since we don't have multer.
+ * A robust basic multipart/form-data parser since we don't have multer.
+ * Handles binary data accurately and supports common field structures.
  */
 async function simpleMultipartParser(req) {
     return new Promise((resolve, reject) => {
         const contentType = req.headers["content-type"] || "";
         const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
         if (!boundaryMatch) {
-            return reject(new Error("No boundary found in multipat content-type"));
+            return reject(new Error("No boundary found in multipart content-type"));
         }
+        
         const boundary = "--" + (boundaryMatch[1] || boundaryMatch[2]);
         const chunks = [];
         
@@ -1373,21 +1375,34 @@ async function simpleMultipartParser(req) {
             try {
                 const buffer = Buffer.concat(chunks);
                 const parts = { fields: {}, files: {} };
-                let start = 0;
-
-                while ((start = buffer.indexOf(boundary, start)) !== -1) {
-                    start += boundary.length;
-                    if (buffer.toString("utf8", start, start + 2) === "--") break;
-                    start += 2; // skip \r\n
-
-                    const headerEnd = buffer.indexOf("\r\n\r\n", start);
+                
+                let cursor = 0;
+                while (cursor < buffer.length) {
+                    // Find the next boundary
+                    const start = buffer.indexOf(boundary, cursor);
+                    if (start === -1) break;
+                    
+                    // Check if it's the end boundary
+                    if (buffer.toString("utf8", start + boundary.length, start + boundary.length + 2) === "--") {
+                        break;
+                    }
+                    
+                    // Move cursor past boundary and the following CRLF
+                    const partStart = start + boundary.length + 2; 
+                    
+                    // Find end of headers
+                    const headerEnd = buffer.indexOf("\r\n\r\n", partStart);
                     if (headerEnd === -1) break;
-
-                    const headerText = buffer.toString("utf8", start, headerEnd);
+                    
+                    const headerText = buffer.toString("utf8", partStart, headerEnd);
                     const contentStart = headerEnd + 4;
-                    const contentEnd = buffer.indexOf("\r\n" + boundary, contentStart);
-                    if (contentEnd === -1) break;
-
+                    
+                    // Find the start of the next boundary to determine content end
+                    const nextStart = buffer.indexOf(boundary, contentStart);
+                    if (nextStart === -1) break;
+                    
+                    // The boundary is preceded by CRLF
+                    const contentEnd = nextStart - 2; 
                     const content = buffer.slice(contentStart, contentEnd);
                     
                     const nameMatch = headerText.match(/name="([^"]+)"/i);
@@ -1402,14 +1417,19 @@ async function simpleMultipartParser(req) {
                                 filename: filenameMatch[1],
                                 mimeType: typeMatch ? typeMatch[1].trim() : "application/octet-stream"
                             };
+                            logger.info("Parsed file part", { name, filename: filenameMatch[1], size: content.length });
                         } else {
                             parts.fields[name] = content.toString("utf8").trim();
+                            logger.info("Parsed field part", { name, length: content.length });
                         }
                     }
-                    start = contentEnd;
+                    
+                    cursor = nextStart;
                 }
+                
                 resolve(parts);
             } catch (err) {
+                logger.error("Multipart parsing failed", { error: err.message });
                 reject(err);
             }
         });
