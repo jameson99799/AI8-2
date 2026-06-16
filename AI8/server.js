@@ -404,12 +404,37 @@ app.post("/v1/images/generations", asyncHandler(async (req, res) => {
 }));
 
 app.post("/v1/images/edits", asyncHandler(async (req, res) => {
-    // OpenAI edits usually uses multipart. 
-    // If the body is JSON (e.g. from an adapter-aware client), we handle it.
-    // Otherwise we return 400 for now as we don't have multer.
-    const body = req.body || {};
+    let body = req.body || {};
+    let files = [];
+
     if (req.headers["content-type"]?.includes("multipart/form-data")) {
-        throw createHttpError(400, "Multipart/form-data not supported yet. Please send as JSON with base64 images.");
+        const parts = await simpleMultipartParser(req);
+        body = parts.fields;
+        
+        if (parts.files.image) {
+            files.push(await normalizeAi8FileInput({
+                data: parts.files.image.data.toString("base64"),
+                mimeType: parts.files.image.mimeType,
+                name: parts.files.image.filename,
+                prefix: "image"
+            }));
+        }
+        if (parts.files.mask) {
+            files.push(await normalizeAi8FileInput({
+                data: parts.files.mask.data.toString("base64"),
+                mimeType: parts.files.mask.mimeType,
+                name: parts.files.mask.filename,
+                prefix: "mask"
+            }));
+        }
+    } else {
+        // Handle JSON case
+        if (body.image) {
+            files.push(await contentPartToAi8File({ type: "input_image", data: body.image }, { prefix: "image" }));
+        }
+        if (body.mask) {
+            files.push(await contentPartToAi8File({ type: "input_image", data: body.mask }, { prefix: "mask" }));
+        }
     }
 
     const config = getConfig();
@@ -418,15 +443,6 @@ app.post("/v1/images/edits", asyncHandler(async (req, res) => {
 
     const requestModel = String(body.model || config.ai8DefaultModel).trim();
     const resolvedModel = await client.resolveModel(requestModel);
-
-    // Prepare files (image and mask if present)
-    const files = [];
-    if (body.image) {
-        files.push(await contentPartToAi8File({ type: "input_image", data: body.image }, { prefix: "image" }));
-    }
-    if (body.mask) {
-        files.push(await contentPartToAi8File({ type: "input_image", data: body.mask }, { prefix: "mask" }));
-    }
 
     const preparedMessages = {
         files,
@@ -1337,6 +1353,68 @@ function isImageModel(modelId, config) {
         displayId.toLowerCase() === m.toLowerCase() || 
         modelId.toLowerCase() === m.toLowerCase()
     );
+}
+
+/**
+ * A basic multipart/form-data parser since we don't have multer.
+ */
+async function simpleMultipartParser(req) {
+    return new Promise((resolve, reject) => {
+        const contentType = req.headers["content-type"] || "";
+        const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+        if (!boundaryMatch) {
+            return reject(new Error("No boundary found in multipat content-type"));
+        }
+        const boundary = "--" + (boundaryMatch[1] || boundaryMatch[2]);
+        const chunks = [];
+        
+        req.on("data", chunk => chunks.push(chunk));
+        req.on("end", () => {
+            try {
+                const buffer = Buffer.concat(chunks);
+                const parts = { fields: {}, files: {} };
+                let start = 0;
+
+                while ((start = buffer.indexOf(boundary, start)) !== -1) {
+                    start += boundary.length;
+                    if (buffer.toString("utf8", start, start + 2) === "--") break;
+                    start += 2; // skip \r\n
+
+                    const headerEnd = buffer.indexOf("\r\n\r\n", start);
+                    if (headerEnd === -1) break;
+
+                    const headerText = buffer.toString("utf8", start, headerEnd);
+                    const contentStart = headerEnd + 4;
+                    const contentEnd = buffer.indexOf("\r\n" + boundary, contentStart);
+                    if (contentEnd === -1) break;
+
+                    const content = buffer.slice(contentStart, contentEnd);
+                    
+                    const nameMatch = headerText.match(/name="([^"]+)"/i);
+                    const filenameMatch = headerText.match(/filename="([^"]+)"/i);
+                    const typeMatch = headerText.match(/Content-Type:\s*([^\r\n]+)/i);
+
+                    if (nameMatch) {
+                        const name = nameMatch[1];
+                        if (filenameMatch) {
+                            parts.files[name] = {
+                                data: content,
+                                filename: filenameMatch[1],
+                                mimeType: typeMatch ? typeMatch[1].trim() : "application/octet-stream"
+                            };
+                        } else {
+                            parts.fields[name] = content.toString("utf8").trim();
+                        }
+                    }
+                    start = contentEnd;
+                }
+                resolve(parts);
+            } catch (err) {
+                reject(err);
+            }
+        });
+        req.on("error", reject);
+    });
 }
 
 function registerProcessLogging() {
