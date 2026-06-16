@@ -12,6 +12,7 @@ const { splitPreparedMessages } = require("./lib/message-layout");
 const RuntimeConfigStore = require("./lib/runtime-config");
 const RuntimeLogger = require("./lib/runtime-logger");
 const { resolveSessionPrompt } = require("./lib/request-prompt");
+const {
     contentPartToAi8File,
     extractAi8Images,
     isProbablyImageFile,
@@ -1356,91 +1357,84 @@ function isImageModel(modelId, config) {
 }
 
 /**
- * A more stable and safe multipart/form-data parser.
+ * A robust basic multipart/form-data parser since we don't have multer.
+ * Handles binary data accurately and supports common field structures.
  */
 async function simpleMultipartParser(req) {
     return new Promise((resolve, reject) => {
         const contentType = req.headers["content-type"] || "";
         const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
         if (!boundaryMatch) {
-            return reject(createHttpError(400, "No boundary found in multipart content-type"));
+            return reject(new Error("No boundary found in multipart content-type"));
         }
         
         const boundary = "--" + (boundaryMatch[1] || boundaryMatch[2]);
         const chunks = [];
-        let totalSize = 0;
-        const MAX_SIZE = 100 * 1024 * 1024; // 100MB limit for multipart
-
-        req.on("data", chunk => {
-            totalSize += chunk.length;
-            if (totalSize > MAX_SIZE) {
-                req.destroy(new Error("File too large"));
-                return;
-            }
-            chunks.push(chunk);
-        });
-
+        
+        req.on("data", chunk => chunks.push(chunk));
         req.on("end", () => {
             try {
                 const buffer = Buffer.concat(chunks);
                 const parts = { fields: {}, files: {} };
                 
-                let pos = buffer.indexOf(boundary);
-                if (pos === -1) return resolve(parts);
-
-                while (pos !== -1) {
-                    const start = pos + boundary.length;
+                let cursor = 0;
+                while (cursor < buffer.length) {
+                    // Find the next boundary
+                    const start = buffer.indexOf(boundary, cursor);
+                    if (start === -1) break;
                     
-                    // Check if we hit the end boundary "--"
-                    if (buffer[start] === 0x2d && buffer[start + 1] === 0x2d) {
+                    // Check if it's the end boundary
+                    if (buffer.toString("utf8", start + boundary.length, start + boundary.length + 2) === "--") {
                         break;
                     }
-
-                    // Look for the end of headers (\r\n\r\n)
-                    const headerEnd = buffer.indexOf("\r\n\r\n", start);
+                    
+                    // Move cursor past boundary and the following CRLF
+                    const partStart = start + boundary.length + 2; 
+                    
+                    // Find end of headers
+                    const headerEnd = buffer.indexOf("\r\n\r\n", partStart);
                     if (headerEnd === -1) break;
-
-                    const headerText = buffer.toString("utf8", start, headerEnd);
+                    
+                    const headerText = buffer.toString("utf8", partStart, headerEnd);
                     const contentStart = headerEnd + 4;
                     
-                    // Find the next boundary to determine the end of current content
-                    const nextBoundary = buffer.indexOf("\r\n" + boundary, contentStart);
-                    if (nextBoundary === -1) break;
-
+                    // Find the start of the next boundary to determine content end
+                    const nextStart = buffer.indexOf(boundary, contentStart);
+                    if (nextStart === -1) break;
+                    
+                    // The boundary is preceded by CRLF
+                    const contentEnd = nextStart - 2; 
+                    const content = buffer.slice(contentStart, contentEnd);
+                    
                     const nameMatch = headerText.match(/name="([^"]+)"/i);
                     const filenameMatch = headerText.match(/filename="([^"]+)"/i);
                     const typeMatch = headerText.match(/Content-Type:\s*([^\r\n]+)/i);
 
                     if (nameMatch) {
                         const name = nameMatch[1];
-                        const content = buffer.slice(contentStart, nextBoundary);
-                        
                         if (filenameMatch) {
                             parts.files[name] = {
                                 data: content,
                                 filename: filenameMatch[1],
                                 mimeType: typeMatch ? typeMatch[1].trim() : "application/octet-stream"
                             };
-                            logger.info("Multipart: Received file", { name, filename: filenameMatch[1], size: content.length });
+                            logger.info("Parsed file part", { name, filename: filenameMatch[1], size: content.length });
                         } else {
                             parts.fields[name] = content.toString("utf8").trim();
-                            logger.info("Multipart: Received field", { name, value: parts.fields[name].length > 100 ? "(long)" : parts.fields[name] });
+                            logger.info("Parsed field part", { name, length: content.length });
                         }
                     }
-
-                    pos = buffer.indexOf(boundary, nextBoundary);
+                    
+                    cursor = nextStart;
                 }
+                
                 resolve(parts);
             } catch (err) {
-                logger.error("Failed to parse multipart data", { error: err.message });
+                logger.error("Multipart parsing failed", { error: err.message });
                 reject(err);
             }
         });
-
-        req.on("error", err => {
-            logger.error("Request stream error during multipart parsing", { error: err.message });
-            reject(err);
-        });
+        req.on("error", reject);
     });
 }
 
