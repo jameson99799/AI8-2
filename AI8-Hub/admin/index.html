@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI8 Hub | 服务枢纽管理后台</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+    <div id="loginOverlay" class="overlay active">
+        <div class="glass-panel login-box">
+            <h2>AI8 Hub</h2>
+            <p>请输入管理员凭证</p>
+            <form id="loginForm" class="stack">
+                <input id="adminTokenInput" autocomplete="off" placeholder="ADMIN_TOKEN / API_KEYS" type="password">
+                <button class="primary-button" type="submit">登入</button>
+            </form>
+            <div id="statusBanner" class="status-banner"></div>
+        </div>
+    </div>
+
+    <div class="app-layout" id="appLayout" style="display: none;">
+        <aside class="sidebar glass-panel">
+            <div class="sidebar-brand">
+                <div class="logo">&#9889;</div>
+                <h3>AI8 Hub</h3>
+            </div>
+            <nav class="nav-menu">
+                <a href="#tab-dashboard" class="nav-item active" data-tab="dashboard">📊 仪表盘</a>
+                <a href="#tab-channels" class="nav-item" data-tab="channels">🔌 API 渠道</a>
+                <a href="#tab-config" class="nav-item" data-tab="config">⚙️ 核心配置</a>
+                <a href="#tab-models" class="nav-item" data-tab="models">🤖 聚合模型</a>
+                <a href="#tab-logs" class="nav-item" data-tab="logs">📋 实时日志</a>
+            </nav>
+            <div class="sidebar-footer stack">
+                <button id="exportConfigBtn" class="ghost-button">📥 全局导出</button>
+                <button id="importConfigBtn" class="ghost-button">📤 导入恢复</button>
+                <input type="file" id="importFileInput" accept=".json" style="display:none">
+                <button id="logoutButton" class="danger-button" style="margin-top: 10px;">退出登录</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Dashboard Tab -->
+            <section id="tab-dashboard" class="tab-pane active">
+                <header class="section-header">
+                    <h2>仪表盘</h2>
+                    <p>系统运行状态与接入指南</p>
+                </header>
+                <div class="grid-2">
+                    <div class="glass-panel">
+                        <h3>运行状态</h3>
+                        <dl id="runtimeGrid" class="info-grid" style="margin-top: 1rem;"></dl>
+                    </div>
+                    <div class="glass-panel">
+                        <h3>应用接入参数</h3>
+                        <div class="code-box" id="exampleOutput" style="margin-top: 1rem;">即将生成...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Channels Tab -->
+            <section id="tab-channels" class="tab-pane">
+                <header class="section-header flex-between">
+                    <div>
+                        <h2>API 渠道管理</h2>
+                        <p>添加并管理自定义的端点以及默认 AI8 网关</p>
+                    </div>
+                    <button class="primary-button" id="btnAddChannel">+ 新增自定义渠道</button>
+                </header>
+                <div class="channels-list" id="channelsList">
+                    <!-- Channels rendered here -->
+                </div>
+            </section>
+
+            <!-- Config Tab -->
+            <section id="tab-config" class="tab-pane">
+                <header class="section-header flex-between">
+                    <div>
+                        <h2>核心配置</h2>
+                        <p>基础环境服务器设置，实时生效。</p>
+                    </div>
+                    <button id="saveConfigButton" class="primary-button">保存全局配置</button>
+                </header>
+                <div class="glass-panel">
+                    <form id="configForm" class="config-grid">
+                        <label class="field field-span-2">
+                            <span>后台管理口令</span>
+                            <input id="adminTokenConfig" autocomplete="off" type="password" placeholder="留空则启动时随机生成">
+                        </label>
+                        <label class="field field-span-2">
+                            <span>本服务对外 API 密钥 (客户端鉴权)</span>
+                            <input id="apiKeys" autocomplete="off" placeholder="以逗号分隔，如 key-a,key-b">
+                        </label>
+                        <label class="field field-span-2">
+                            <span>默认代理模型</span>
+                            <input id="ai8DefaultModel" placeholder="openai_chat::gpt-4.1-mini">
+                        </label>
+                        <label class="field">
+                            <span>请求超时毫秒</span>
+                            <input id="ai8RequestTimeoutMs" type="number" placeholder="300000">
+                        </label>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Models Tab -->
+            <section id="tab-models" class="tab-pane">
+                <header class="section-header flex-between">
+                    <div>
+                        <h2>聚合模型</h2>
+                        <p>所有启用的渠道模型池，包含渠道的后缀区隔标志。</p>
+                    </div>
+                    <button id="refreshModelsButton" class="primary-button">强刷获取模型</button>
+                </header>
+                <div class="glass-panel">
+                    <div id="modelsMeta" class="muted pb-4">加载中...</div>
+                    <div id="modelsList" class="tag-cloud"></div>
+                </div>
+            </section>
+
+            <!-- Logs Tab -->
+            <section id="tab-logs" class="tab-pane">
+                <header class="section-header flex-between">
+                    <div>
+                        <h2>实时日志</h2>
+                        <p>系统最近的运行和分发追踪日志</p>
+                    </div>
+                    <button id="refreshLogsButton" class="ghost-button">手动刷新</button>
+                </header>
+                <pre id="logsOutput" class="glass-panel log-box"></pre>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Channel Edit Modal -->
+    <div id="channelModal" class="overlay">
+        <div class="glass-panel modal-box">
+            <h3 id="modalTitle">新增渠道</h3>
+            <div class="modal-body">
+                <form id="channelForm" class="stack">
+                    <input type="hidden" id="channelId">
+                    <label class="field">
+                        <span>渠道备注名 (用于重名识别标注)</span>
+                        <input id="channelName" required placeholder="如：DeepSeek官方">
+                    </label>
+                    <label class="field">
+                        <span>支持的输出接口</span>
+                        <select id="channelProtocol">
+                            <option value="both">独立支持 OpenAI 与 Claude 双向协议 (推荐)</option>
+                            <option value="openai">仅支持 OpenAI 接口格式</option>
+                            <option value="claude">仅支持 Claude (Anthropic) 接口格式</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>API 地址 (Base URL)</span>
+                        <input id="channelBaseUrl" required placeholder="如：https://api.deepseek.com">
+                    </label>
+                    <label class="field relative">
+                        <span>API 密钥 (API Key)</span>
+                        <div style="display: flex; gap: 8px;">
+                            <input id="channelApiKey" type="password" required placeholder="sk-.../为空则不鉴权" style="flex:1;">
+                            <button type="button" class="ghost-button icon-button" id="toggleApiKeyVisibility">👁️</button>
+                        </div>
+                    </label>
+                    <div class="button-row" style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" class="ghost-button" id="btnCancelChannel">取消</button>
+                        <button type="submit" class="primary-button">保存设置</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Channel Models Modal -->
+    <div id="modelsModal" class="overlay">
+        <div class="glass-panel modal-box" style="width: 700px; max-width: 95vw;">
+            <div class="flex-between" style="border-bottom: 1px solid var(--border-color); margin-bottom: 1rem; padding-bottom: 1rem;">
+                <h3 style="border:none; margin:0; padding:0;" id="modelsModalTitle">渠道模型</h3>
+                <button type="button" class="ghost-button icon-button" onclick="document.getElementById('modelsModal').classList.remove('active')">✖</button>
+            </div>
+            <div class="modal-body stack" style="gap: 15px;">
+                <div class="flex-between" style="gap: 10px; align-items: center;">
+                    <input type="search" id="modelSearchInput" placeholder="请输入模型名称进行模糊搜索..." style="flex: 1;" oninput="filterChannelModels()">
+                    <button type="button" class="ghost-button" onclick="selectAllChannelModels()">全选过滤项</button>
+                    <button type="button" class="ghost-button" onclick="deselectAllChannelModels()">清空选项</button>
+                </div>
+                <div id="channelModelsMeta" class="muted" style="font-size: 0.85rem;">如果不勾选任何模型，则代表全量放通渠道内的所有模型。</div>
+                <div id="channelModelsList" class="model-checklist" style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; padding-right: 10px;">
+                    <!-- Models dynamically inserted here -->
+                </div>
+                <div class="button-row" style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                    <button type="button" class="ghost-button" onclick="document.getElementById('modelsModal').classList.remove('active')">取消</button>
+                    <button type="button" class="primary-button" id="btnSaveChannelModels">提交并保存可用模型池</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Test Prompt Modal -->
+    <div id="testModal" class="overlay">
+        <div class="glass-panel modal-box" style="width: 600px;">
+            <h3 id="testModalTitle">测试模型</h3>
+            <div class="modal-body stack">
+                <p id="testModelName" style="color:var(--accent); font-weight:600;"></p>
+                <label class="field">
+                    <span>测试输入内容 (将会全局记忆)</span>
+                    <textarea id="testPromptInput" placeholder="你好，请介绍下自己。"></textarea>
+                </label>
+                <div class="field">
+                    <span>返回结果</span>
+                    <pre id="testResultBox" class="code-box" style="min-height: 120px;">等待测试...</pre>
+                </div>
+            </div>
+            <div class="button-row flex-between" style="margin-top: 1.5rem;">
+                <button type="button" class="ghost-button" onclick="document.getElementById('testModal').classList.remove('active')">关闭</button>
+                <button type="button" class="primary-button" id="btnRunTest">🚀 发送测试</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="./app.js"></script>
+</body>
+</html>

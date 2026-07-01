@@ -1,0 +1,53 @@
+{
+  "adminToken": "x9981509",
+  "ai8AuthToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjI0OTEsInNpZ24iOiI5MjM5N2QwMjE2N2E1NWJkNTNiMWRjY2E3NWYzMjQzMCIsInJvbGUiOiJ1c2VyIiwiZXhwIjoyMDk4MjQ1MjkyLCJuYmYiOjE3ODI4ODUyOTIsImlhdCI6MTc4Mjg4NTI5Mn0.lXLiK8jR0bq58OaEUEVVXCZaj23AaVGusnWiYQrqFXo",
+  "ai8BaseUrl": "https://ai8.rcouyi.com/api",
+  "ai8DefaultModel": "openai_chat::gpt-4.1-mini",
+  "ai8RequestTimeoutMs": "300000",
+  "apiKeys": "x9981509",
+  "updatedAt": "2026-07-01T08:30:10.652Z",
+  "customChannels": [
+    {
+      "name": "yingweida",
+      "baseUrl": "https://integrate.api.nvidia.com/v1",
+      "apiKey": "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",
+      "protocol": "both",
+      "enabled": true,
+      "models": [
+        "deepseek-ai/deepseek-v4-flash",
+        "deepseek-ai/deepseek-v4-pro",
+        "google/gemma-4-31b-it",
+        "meta/llama-4-maverick-17b-128e-instruct",
+        "minimaxai/minimax-m3",
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
+        "qwen/qwen3-next-80b-a3b-instruct",
+        "qwen/qwen3.5-122b-a10b",
+        "qwen/qwen3.5-397b-a17b",
+        "stepfun-ai/step-3.7-flash",
+        "z-ai/glm-5.1"
+      ]
+    },
+    {
+      "name": "agnes-ai",
+      "baseUrl": "https://apihub.agnes-ai.com/v1",
+      "apiKey": "sk-GLpaSqRR3aB28wkn5tKsirHYyTUERnd2nXPiO5w10oe7Th7C",
+      "protocol": "both",
+      "enabled": true,
+      "models": [
+        "agnes-2.0-flash"
+      ]
+    },
+    {
+      "name": "ouyi",
+      "baseUrl": "https://api.rcouyi.com",
+      "apiKey": "sk-Qm4c03dk48F9xyWP84Ec625cF48547E586F012724f1d636d",
+      "protocol": "both",
+      "enabled": true,
+      "models": [
+        "ouyi-5-preview",
+        "ouyi-5-preview-thinking"
+      ]
+    }
+  ]
+}

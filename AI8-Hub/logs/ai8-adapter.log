@@ -1,0 +1,635 @@
+[2026-07-01T06:10:24.058Z] [WARN] Admin console is protected by a generated temporary token {"adminUrl":"/admin","reason":"startup","token":"e169d0caa1ec8e114910be1dbfb755b2fb2a"}
+[2026-07-01T06:10:24.099Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T06:10:35.525Z] [INFO] HTTP request {"duration_ms":5,"ip":"127.0.0.1","method":"GET","path":"/admin/index.html","status":200}
+[2026-07-01T06:11:20.134Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin","status":301}
+[2026-07-01T06:11:20.150Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":200}
+[2026-07-01T06:11:20.278Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":200}
+[2026-07-01T06:11:20.280Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":200}
+[2026-07-01T06:11:22.684Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":401}
+[2026-07-01T06:11:22.685Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":401}
+[2026-07-01T06:11:23.884Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/favicon.ico","status":404}
+[2026-07-01T06:11:35.764Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":401}
+[2026-07-01T06:11:35.765Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":401}
+[2026-07-01T06:11:37.858Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":401}
+[2026-07-01T06:11:37.858Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":401}
+[2026-07-01T06:12:12.931Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":401}
+[2026-07-01T06:12:12.932Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":401}
+[2026-07-01T06:12:39.933Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":401}
+[2026-07-01T06:12:39.933Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":401}
+[2026-07-01T06:12:44.731Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":401}
+[2026-07-01T06:12:44.731Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":401}
+[2026-07-01T06:13:43.066Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T06:13:52.885Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":304}
+[2026-07-01T06:13:52.984Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":304}
+[2026-07-01T06:13:52.987Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":304}
+[2026-07-01T06:13:53.079Z] [INFO] HTTP request {"duration_ms":19,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T06:13:53.080Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":200}
+[2026-07-01T06:13:53.207Z] [ERROR] Request failed {"message":"AI8 upstream token is not configured. Open /admin and save AI8_AUTH_TOKEN first.","method":"GET","path":"/admin/api/models","stack":"Error: AI8 upstream token is not configured. Open /admin and save AI8_AUTH_TOKEN first.\n    at createHttpError (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\server.js:1437:19)\n    at getClient (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\server.js:1063:15)\n    at C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\server.js:147:20\n    at C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\server.js:1444:25\n    at Layer.handle [as handle_request] (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\node_modules\\express\\lib\\router\\layer.js:95:5)\n    at next (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\node_modules\\express\\lib\\router\\route.js:149:13)\n    at requireAdminAuth (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\server.js:1121:16)\n    at Layer.handle [as handle_request] (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\node_modules\\express\\lib\\router\\layer.js:95:5)\n    at next (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\node_modules\\express\\lib\\router\\route.js:149:13)\n    at Route.dispatch (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\node_modules\\express\\lib\\router\\route.js:119:3)","status":503}
+[2026-07-01T06:13:53.208Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":503}
+[2026-07-01T06:13:53.212Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":200}
+[2026-07-01T06:19:59.112Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":304}
+[2026-07-01T06:19:59.225Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":304}
+[2026-07-01T06:19:59.225Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":304}
+[2026-07-01T06:19:59.289Z] [INFO] HTTP request {"duration_ms":18,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T06:19:59.290Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":304}
+[2026-07-01T06:19:59.448Z] [ERROR] Request failed {"message":"AI8 upstream token is not configured. Open /admin and save AI8_AUTH_TOKEN first.","method":"GET","path":"/admin/api/models","stack":"Error: AI8 upstream token is not configured. Open /admin and save AI8_AUTH_TOKEN first.\n    at createHttpError (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\server.js:1437:19)\n    at getClient (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\server.js:1063:15)\n    at C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\server.js:147:20\n    at C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\server.js:1444:25\n    at Layer.handle [as handle_request] (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\node_modules\\express\\lib\\router\\layer.js:95:5)\n    at next (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\node_modules\\express\\lib\\router\\route.js:149:13)\n    at requireAdminAuth (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\server.js:1121:16)\n    at Layer.handle [as handle_request] (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\node_modules\\express\\lib\\router\\layer.js:95:5)\n    at next (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\node_modules\\express\\lib\\router\\route.js:149:13)\n    at Route.dispatch (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\node_modules\\express\\lib\\router\\route.js:119:3)","status":503}
+[2026-07-01T06:19:59.449Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":503}
+[2026-07-01T06:19:59.452Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":304}
+[2026-07-01T06:20:24.476Z] [INFO] Runtime config updated {"adminAuthMode":"admin_token","apiKeyCount":1,"changedKeys":["adminToken","ai8AuthToken","ai8BaseUrl","ai8DefaultModel","ai8RequestTimeoutMs","apiKeys"],"publicBaseUrlConfigured":false,"upstreamReady":true}
+[2026-07-01T06:20:24.478Z] [INFO] HTTP request {"duration_ms":4,"ip":"127.0.0.1","method":"PUT","path":"/admin/api/config","status":200}
+[2026-07-01T06:20:29.396Z] [INFO] HTTP request {"duration_ms":17,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T06:20:29.397Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":200}
+[2026-07-01T06:20:29.401Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T06:20:29.430Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":304}
+[2026-07-01T06:20:30.000Z] [INFO] HTTP request {"duration_ms":600,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
+[2026-07-01T06:21:14.506Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"PUT","path":"/admin/api/channels","status":200}
+[2026-07-01T06:21:14.918Z] [INFO] HTTP request {"duration_ms":409,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
+[2026-07-01T06:22:00.620Z] [INFO] HTTP request {"duration_ms":407,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T06:23:14.735Z] [WARN] Request failed {"message":"Model \"moonshotai/kimi-k2.6\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T06:23:14.736Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T06:23:14.736Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T06:23:16.349Z] [WARN] Request failed {"message":"Model \"moonshotai/kimi-k2.6\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T06:23:16.350Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T06:23:16.351Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T06:33:36.080Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T06:34:45.549Z] [INFO] HTTP request {"duration_ms":4,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":200}
+[2026-07-01T06:34:45.650Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":200}
+[2026-07-01T06:34:45.650Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":200}
+[2026-07-01T06:34:45.699Z] [INFO] HTTP request {"duration_ms":19,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T06:34:45.700Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":200}
+[2026-07-01T06:34:45.744Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T06:34:45.769Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":200}
+[2026-07-01T06:34:47.423Z] [INFO] HTTP request {"duration_ms":1679,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
+[2026-07-01T06:34:47.679Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":304}
+[2026-07-01T06:34:47.770Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":304}
+[2026-07-01T06:34:47.774Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":304}
+[2026-07-01T06:34:47.836Z] [INFO] HTTP request {"duration_ms":19,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T06:34:47.837Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":304}
+[2026-07-01T06:34:47.858Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":304}
+[2026-07-01T06:34:47.859Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":304}
+[2026-07-01T06:35:38.075Z] [INFO] HTTP request {"duration_ms":3174,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:35:49.344Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:35:50.963Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:35:52.386Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:35:53.817Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:35:54.565Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:36:12.645Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:36:28.665Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:36:28.666Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:36:30.378Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:36:30.379Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:36:41.429Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"PUT","path":"/admin/api/channels","status":200}
+[2026-07-01T06:36:42.882Z] [INFO] HTTP request {"duration_ms":1450,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models?refresh=true","status":200}
+[2026-07-01T06:37:24.274Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"PUT","path":"/admin/api/channels","status":200}
+[2026-07-01T06:37:29.754Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T06:37:30.317Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T06:37:32.324Z] [ERROR] Request failed {"message":"上游异常提示(HttpCode:415)：0 - Unsupported media type: application/json;charset=UTF-8. It must be application/json (request id: 2026070114373084206628179517536)","method":"POST","path":"/v1/chat/completions","stack":"Error: 上游异常提示(HttpCode:415)：0 - Unsupported media type: application/json;charset=UTF-8. It must be application/json (request id: 2026070114373084206628179517536)\n    at AI8Client._buildError (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\lib\\ai8-client.js:481:23)\n    at AI8Client._normalizeError (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\lib\\ai8-client.js:421:28)\n    at AI8Client.streamChatCompletion (C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\lib\\ai8-client.js:292:32)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async C:\\Users\\x9981\\Desktop\\AI8\\AI8-Hub\\server.js:397:26","status":502}
+[2026-07-01T06:37:32.326Z] [INFO] HTTP request {"duration_ms":2010,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":502}
+[2026-07-01T06:38:06.571Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":304}
+[2026-07-01T06:38:06.674Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":304}
+[2026-07-01T06:38:06.676Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":200}
+[2026-07-01T06:38:06.714Z] [INFO] HTTP request {"duration_ms":21,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T06:38:06.715Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":200}
+[2026-07-01T06:38:06.852Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":200}
+[2026-07-01T06:38:10.085Z] [INFO] HTTP request {"duration_ms":3232,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
+[2026-07-01T06:41:28.345Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":304}
+[2026-07-01T06:41:28.459Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":304}
+[2026-07-01T06:41:28.460Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":304}
+[2026-07-01T06:41:28.491Z] [INFO] HTTP request {"duration_ms":18,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T06:41:28.493Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":304}
+[2026-07-01T06:41:28.534Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
+[2026-07-01T06:41:28.536Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":304}
+[2026-07-01T06:41:37.810Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:41:39.595Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:41:40.425Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:41:52.587Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:42:01.816Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"PUT","path":"/admin/api/channels","status":200}
+[2026-07-01T06:42:03.563Z] [INFO] HTTP request {"duration_ms":1741,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models?refresh=true","status":200}
+[2026-07-01T06:42:06.796Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:42:16.419Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:42:16.419Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:42:19.518Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T06:42:30.567Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":401}
+[2026-07-01T06:42:44.518Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":401}
+[2026-07-01T06:42:46.266Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:42:46.267Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:42:46.798Z] [INFO] HTTP request {"duration_ms":8116,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:42:46.798Z] [INFO] HTTP request {"duration_ms":8116,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:43:08.553Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":401}
+[2026-07-01T06:43:18.671Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":401}
+[2026-07-01T06:43:35.760Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"PUT","path":"/admin/api/channels","status":200}
+[2026-07-01T06:43:37.156Z] [INFO] HTTP request {"duration_ms":1390,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models?refresh=true","status":200}
+[2026-07-01T06:43:50.595Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"PUT","path":"/admin/api/channels","status":200}
+[2026-07-01T06:43:56.124Z] [WARN] Failed to fetch models for channel yingweida {"error":"TimeoutError: The operation was aborted due to timeout"}
+[2026-07-01T06:43:56.126Z] [INFO] HTTP request {"duration_ms":5527,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models?refresh=true","status":200}
+[2026-07-01T06:43:58.552Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"PUT","path":"/admin/api/channels","status":200}
+[2026-07-01T06:44:00.070Z] [INFO] HTTP request {"duration_ms":1515,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models?refresh=true","status":200}
+[2026-07-01T06:44:03.521Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:46:31.254Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:47:12.296Z] [WARN] Request failed {"message":"Model \"moonshotai\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T06:47:12.296Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T06:47:19.463Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:47:28.775Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T06:48:10.521Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:48:34.446Z] [WARN] Request failed {"message":"Model \"meta/llama-3.1-405b-instruct\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T06:48:34.447Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T06:48:41.090Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:52:51.418Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":200}
+[2026-07-01T06:55:12.289Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7877","port":7877}
+[2026-07-01T06:55:22.232Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T06:55:22.813Z] [WARN] Request failed {"message":"Model \"moonshotai/kimi-k2.6\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T06:55:22.816Z] [INFO] HTTP request {"duration_ms":584,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T06:57:04.023Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T06:57:05.039Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T06:57:05.574Z] [WARN] Request failed {"message":"Model \"moonshotai/kimi-k2.6\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T06:57:05.577Z] [INFO] HTTP request {"duration_ms":539,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T06:57:05.578Z] [INFO] HTTP request {"duration_ms":539,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T06:57:25.501Z] [WARN] Request failed {"message":"Model \"moonshotai/kimi-k2.6\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T06:57:25.502Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T06:57:25.502Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T06:57:59.101Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":304}
+[2026-07-01T06:57:59.212Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":304}
+[2026-07-01T06:57:59.216Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":304}
+[2026-07-01T06:57:59.265Z] [INFO] HTTP request {"duration_ms":21,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T06:57:59.267Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":200}
+[2026-07-01T06:57:59.589Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":200}
+[2026-07-01T06:58:04.590Z] [WARN] Failed to fetch models for channel yingweida {"error":"TimeoutError: The operation was aborted due to timeout"}
+[2026-07-01T06:58:04.592Z] [INFO] HTTP request {"duration_ms":5007,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
+[2026-07-01T06:58:09.672Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"PUT","path":"/admin/api/channels","status":200}
+[2026-07-01T06:58:11.956Z] [INFO] HTTP request {"duration_ms":2278,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models?refresh=true","status":200}
+[2026-07-01T06:58:22.663Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"PUT","path":"/admin/api/channels","status":200}
+[2026-07-01T06:58:27.875Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T06:58:28.211Z] [WARN] Failed to fetch models for channel yingweida {"error":"TimeoutError: The operation was aborted due to timeout"}
+[2026-07-01T06:58:28.214Z] [INFO] HTTP request {"duration_ms":5548,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models?refresh=true","status":200}
+[2026-07-01T06:58:29.240Z] [WARN] Request failed {"message":"Model \"deepseek-ai/deepseek-v4-flash\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T06:58:29.242Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T06:58:34.261Z] [WARN] Request failed {"message":"Model \"deepseek-ai/deepseek-v4-flash\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T06:58:34.262Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T06:58:34.823Z] [WARN] Request failed {"message":"Model \"deepseek-ai/deepseek-v4-flash\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T06:58:34.824Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T06:58:48.087Z] [WARN] Request failed {"message":"Model \"moonshotai/kimi-k2.6\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T06:58:48.088Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T06:58:48.089Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T06:59:55.215Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T07:01:49.787Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":304}
+[2026-07-01T07:01:49.896Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":304}
+[2026-07-01T07:01:49.897Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":304}
+[2026-07-01T07:01:49.957Z] [INFO] HTTP request {"duration_ms":18,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T07:01:49.958Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":200}
+[2026-07-01T07:01:49.986Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":200}
+[2026-07-01T07:01:49.987Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T07:01:52.504Z] [INFO] HTTP request {"duration_ms":2517,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
+[2026-07-01T07:02:11.816Z] [INFO] HTTP request {"duration_ms":4145,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:02:11.816Z] [INFO] HTTP request {"duration_ms":4144,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:02:16.814Z] [INFO] HTTP request {"duration_ms":19639,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:02:53.137Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T07:04:01.275Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":304}
+[2026-07-01T07:04:01.377Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":304}
+[2026-07-01T07:04:01.378Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":304}
+[2026-07-01T07:04:01.417Z] [INFO] HTTP request {"duration_ms":20,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T07:04:01.418Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":304}
+[2026-07-01T07:04:01.448Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T07:04:01.469Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":304}
+[2026-07-01T07:04:04.900Z] [INFO] HTTP request {"duration_ms":3453,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
+[2026-07-01T07:04:09.715Z] [WARN] Request failed {"message":"Model \"moonshotai/kimi-k2.6\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T07:04:09.715Z] [INFO] HTTP request {"duration_ms":5049,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:04:09.715Z] [INFO] HTTP request {"duration_ms":5048,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:04:31.334Z] [WARN] Request failed {"message":"Model \"moonshotai/kimi-k2.6\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T07:04:31.334Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:04:31.335Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:04:59.166Z] [WARN] Request failed {"message":"Model \"openai/gpt-oss-120b\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T07:04:59.167Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:07:28.635Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":304}
+[2026-07-01T07:07:28.751Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":304}
+[2026-07-01T07:07:28.753Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":304}
+[2026-07-01T07:07:28.817Z] [INFO] HTTP request {"duration_ms":16,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T07:07:28.818Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":304}
+[2026-07-01T07:07:28.844Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
+[2026-07-01T07:07:28.846Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":304}
+[2026-07-01T07:07:33.750Z] [WARN] Request failed {"message":"Model \"moonshotai/kimi-k2.6\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T07:07:33.750Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:07:33.751Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:07:35.176Z] [WARN] Request failed {"message":"Model \"moonshotai/kimi-k2.6\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T07:07:35.177Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:07:35.177Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:10:02.658Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":304}
+[2026-07-01T07:10:02.774Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":304}
+[2026-07-01T07:10:02.775Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":304}
+[2026-07-01T07:10:02.806Z] [INFO] HTTP request {"duration_ms":20,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T07:10:02.808Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":304}
+[2026-07-01T07:10:02.842Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":304}
+[2026-07-01T07:10:05.528Z] [INFO] HTTP request {"duration_ms":2688,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
+[2026-07-01T07:10:17.913Z] [INFO] HTTP request {"duration_ms":5500,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:10:17.913Z] [INFO] HTTP request {"duration_ms":5500,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:10:23.453Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T07:11:14.414Z] [INFO] HTTP request {"duration_ms":6162,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:11:20.331Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T07:11:49.316Z] [INFO] HTTP request {"duration_ms":16890,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:11:49.317Z] [INFO] HTTP request {"duration_ms":16891,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:11:54.699Z] [INFO] HTTP request {"duration_ms":11442,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:11:54.700Z] [INFO] HTTP request {"duration_ms":11443,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:12:59.827Z] [INFO] HTTP request {"duration_ms":16366,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:13:12.918Z] [INFO] HTTP request {"duration_ms":4459,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:13:53.709Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T07:14:44.088Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T07:15:17.340Z] [INFO] HTTP request {"duration_ms":33252,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:15:17.340Z] [INFO] HTTP request {"duration_ms":33252,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:15:41.169Z] [INFO] HTTP request {"duration_ms":4392,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:16:11.200Z] [INFO] HTTP request {"duration_ms":47132,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:16:11.200Z] [INFO] HTTP request {"duration_ms":47133,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:16:19.007Z] [INFO] HTTP request {"duration_ms":3982,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:16:19.008Z] [INFO] HTTP request {"duration_ms":3983,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:16:43.656Z] [INFO] HTTP request {"duration_ms":10705,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":502}
+[2026-07-01T07:16:43.656Z] [INFO] HTTP request {"duration_ms":10705,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":502}
+[2026-07-01T07:17:26.740Z] [INFO] HTTP request {"duration_ms":26058,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:17:26.741Z] [INFO] HTTP request {"duration_ms":26059,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:17:57.206Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T07:17:58.901Z] [INFO] HTTP request {"duration_ms":5119,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:17:58.901Z] [INFO] HTTP request {"duration_ms":5119,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:18:29.879Z] [INFO] HTTP request {"duration_ms":8366,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:18:29.880Z] [INFO] HTTP request {"duration_ms":8367,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:18:47.445Z] [INFO] HTTP request {"duration_ms":3975,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:19:07.051Z] [INFO] HTTP request {"duration_ms":4465,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:19:07.051Z] [INFO] HTTP request {"duration_ms":4464,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:19:27.834Z] [INFO] HTTP request {"duration_ms":6581,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:19:27.834Z] [INFO] HTTP request {"duration_ms":6581,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:21:37.577Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T07:22:35.275Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T07:22:42.835Z] [INFO] HTTP request {"duration_ms":7560,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:22:42.836Z] [INFO] HTTP request {"duration_ms":7561,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:22:56.663Z] [INFO] HTTP request {"duration_ms":7800,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:22:56.664Z] [INFO] HTTP request {"duration_ms":7801,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:23:07.044Z] [INFO] HTTP request {"duration_ms":6962,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:23:07.045Z] [INFO] HTTP request {"duration_ms":6963,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:23:44.259Z] [INFO] HTTP request {"duration_ms":35115,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:23:44.259Z] [INFO] HTTP request {"duration_ms":35114,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:24:08.814Z] [INFO] HTTP request {"duration_ms":4901,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:24:08.815Z] [INFO] HTTP request {"duration_ms":4902,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:24:33.802Z] [INFO] HTTP request {"duration_ms":21251,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:24:33.802Z] [INFO] HTTP request {"duration_ms":21251,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:24:59.930Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T07:27:07.368Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T07:27:42.971Z] [INFO] HTTP request {"duration_ms":17441,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:27:42.972Z] [INFO] HTTP request {"duration_ms":17442,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:27:55.528Z] [INFO] HTTP request {"duration_ms":5945,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:27:55.529Z] [INFO] HTTP request {"duration_ms":5945,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:28:04.278Z] [INFO] HTTP request {"duration_ms":4816,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:28:04.279Z] [INFO] HTTP request {"duration_ms":4817,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:28:16.261Z] [INFO] HTTP request {"duration_ms":6225,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:28:16.261Z] [INFO] HTTP request {"duration_ms":6225,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:28:42.943Z] [INFO] HTTP request {"duration_ms":8261,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:28:42.943Z] [INFO] HTTP request {"duration_ms":8261,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:28:49.488Z] [INFO] HTTP request {"duration_ms":3512,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:28:49.489Z] [INFO] HTTP request {"duration_ms":3513,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:29:10.206Z] [INFO] HTTP request {"duration_ms":17085,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:29:10.207Z] [INFO] HTTP request {"duration_ms":17085,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:29:45.960Z] [INFO] HTTP request {"duration_ms":7639,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:29:45.960Z] [INFO] HTTP request {"duration_ms":7639,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:30:11.071Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T07:30:13.350Z] [INFO] HTTP request {"duration_ms":19662,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:30:13.350Z] [INFO] HTTP request {"duration_ms":19662,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:30:22.201Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T07:30:24.544Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T07:30:37.793Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":304}
+[2026-07-01T07:30:37.923Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":304}
+[2026-07-01T07:30:37.924Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":304}
+[2026-07-01T07:30:37.959Z] [INFO] HTTP request {"duration_ms":22,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T07:30:37.961Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":304}
+[2026-07-01T07:30:38.115Z] [INFO] HTTP request {"duration_ms":4,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
+[2026-07-01T07:30:38.117Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":304}
+[2026-07-01T07:30:49.706Z] [INFO] HTTP request {"duration_ms":1340,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:30:56.813Z] [INFO] HTTP request {"duration_ms":886,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":404}
+[2026-07-01T07:31:27.872Z] [INFO] HTTP request {"duration_ms":12566,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:31:27.872Z] [INFO] HTTP request {"duration_ms":12566,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:32:09.770Z] [INFO] HTTP request {"duration_ms":66138,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:32:18.021Z] [INFO] HTTP request {"duration_ms":4393,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:32:18.021Z] [INFO] HTTP request {"duration_ms":4393,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:32:25.967Z] [INFO] HTTP request {"duration_ms":3992,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:32:25.968Z] [INFO] HTTP request {"duration_ms":3993,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:32:52.901Z] [INFO] HTTP request {"duration_ms":10252,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:32:52.902Z] [INFO] HTTP request {"duration_ms":10253,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:33:19.606Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":304}
+[2026-07-01T07:33:19.723Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":304}
+[2026-07-01T07:33:19.724Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":304}
+[2026-07-01T07:33:19.777Z] [INFO] HTTP request {"duration_ms":18,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T07:33:19.779Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":304}
+[2026-07-01T07:33:19.794Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
+[2026-07-01T07:33:19.795Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":304}
+[2026-07-01T07:33:20.856Z] [INFO] HTTP request {"duration_ms":5448,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:33:20.857Z] [INFO] HTTP request {"duration_ms":5449,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:33:45.369Z] [INFO] HTTP request {"duration_ms":21911,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:33:45.369Z] [INFO] HTTP request {"duration_ms":21911,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:34:38.812Z] [INFO] HTTP request {"duration_ms":6053,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:34:38.812Z] [INFO] HTTP request {"duration_ms":6053,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:35:02.028Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T07:36:29.962Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T07:36:43.295Z] [INFO] HTTP request {"duration_ms":13333,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:36:43.295Z] [INFO] HTTP request {"duration_ms":13333,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:37:15.442Z] [INFO] HTTP request {"duration_ms":39536,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:37:15.442Z] [INFO] HTTP request {"duration_ms":39536,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:37:20.756Z] [INFO] HTTP request {"duration_ms":3624,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:37:20.757Z] [INFO] HTTP request {"duration_ms":3625,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:37:34.960Z] [INFO] HTTP request {"duration_ms":8553,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:37:34.960Z] [INFO] HTTP request {"duration_ms":8553,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:37:57.083Z] [INFO] HTTP request {"duration_ms":8716,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:37:57.083Z] [INFO] HTTP request {"duration_ms":8716,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:38:44.725Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T07:39:54.396Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T07:40:06.422Z] [INFO] HTTP request {"duration_ms":12027,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:40:06.422Z] [INFO] HTTP request {"duration_ms":12027,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:40:06.943Z] [INFO] HTTP request {"duration_ms":10359,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:40:06.944Z] [INFO] HTTP request {"duration_ms":10360,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:40:18.124Z] [INFO] HTTP request {"duration_ms":8322,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:40:18.125Z] [INFO] HTTP request {"duration_ms":8323,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:40:37.841Z] [INFO] HTTP request {"duration_ms":17619,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:40:37.842Z] [INFO] HTTP request {"duration_ms":17620,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:40:39.779Z] [WARN] Request failed {"message":"Model \"openai/gpt-oss-20b\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T07:40:39.781Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:40:39.781Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:40:47.973Z] [WARN] Request failed {"message":"Model \"openai/gpt-oss-20b\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T07:40:47.974Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:40:47.974Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:40:53.359Z] [INFO] HTTP request {"duration_ms":55536,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:40:53.360Z] [INFO] HTTP request {"duration_ms":55536,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:41:31.615Z] [WARN] Request failed {"message":"Model \"moonshotai/kimi-k2.6\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T07:41:31.616Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:41:31.616Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:42:50.781Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T07:43:27.372Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T07:43:33.999Z] [INFO] HTTP request {"duration_ms":6628,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:43:34.000Z] [INFO] HTTP request {"duration_ms":6628,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:43:52.673Z] [INFO] HTTP request {"duration_ms":4155,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:43:52.673Z] [INFO] HTTP request {"duration_ms":4155,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:44:06.450Z] [INFO] HTTP request {"duration_ms":7126,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:44:06.451Z] [INFO] HTTP request {"duration_ms":7127,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:44:22.100Z] [INFO] HTTP request {"duration_ms":12492,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:44:22.101Z] [INFO] HTTP request {"duration_ms":12493,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:45:45.533Z] [INFO] HTTP request {"duration_ms":74532,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:45:45.534Z] [INFO] HTTP request {"duration_ms":74533,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:47:40.590Z] [INFO] HTTP request {"duration_ms":9924,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:47:40.590Z] [INFO] HTTP request {"duration_ms":9924,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:48:04.982Z] [INFO] HTTP request {"duration_ms":14170,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:48:04.982Z] [INFO] HTTP request {"duration_ms":14169,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:48:10.763Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"POST","path":"/v1/messages","status":401}
+[2026-07-01T07:48:18.684Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/messages","status":401}
+[2026-07-01T07:48:25.588Z] [INFO] HTTP request {"duration_ms":5068,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:48:25.589Z] [INFO] HTTP request {"duration_ms":5068,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:48:28.561Z] [INFO] HTTP request {"duration_ms":19121,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:48:28.561Z] [INFO] HTTP request {"duration_ms":19121,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:48:30.162Z] [INFO] HTTP request {"duration_ms":5006,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":502}
+[2026-07-01T07:48:30.163Z] [INFO] HTTP request {"duration_ms":5007,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":502}
+[2026-07-01T07:48:36.075Z] [INFO] HTTP request {"duration_ms":218929,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:48:36.075Z] [INFO] HTTP request {"duration_ms":218929,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:48:50.783Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T07:48:56.808Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T07:49:01.501Z] [INFO] HTTP request {"duration_ms":4694,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:49:01.502Z] [INFO] HTTP request {"duration_ms":4695,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:49:54.785Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T07:50:30.377Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T07:50:45.989Z] [INFO] HTTP request {"duration_ms":15613,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:50:45.990Z] [INFO] HTTP request {"duration_ms":15614,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:51:12.992Z] [WARN] Request failed {"message":"Model \"moonshotai/kimi-k2.6\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T07:51:12.994Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:51:12.994Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:51:15.479Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T07:51:35.595Z] [INFO] HTTP request {"duration_ms":7969,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:51:35.596Z] [INFO] HTTP request {"duration_ms":7970,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:51:47.004Z] [INFO] HTTP request {"duration_ms":7094,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:51:47.005Z] [INFO] HTTP request {"duration_ms":7095,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:51:56.701Z] [INFO] HTTP request {"duration_ms":5860,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:51:56.701Z] [INFO] HTTP request {"duration_ms":5860,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:51:58.698Z] [WARN] Request failed {"message":"Model \"deepseek-ai/deepseek-v4-flash\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T07:51:58.699Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:51:58.699Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:52:06.652Z] [WARN] Request failed {"message":"Model \"deepseek-ai/deepseek-v4-flash\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T07:52:06.653Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:52:06.653Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:52:19.576Z] [WARN] Request failed {"message":"Model \"openai/gpt-oss-20b\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T07:52:19.577Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:52:19.577Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:52:29.589Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T07:53:06.154Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T07:53:13.356Z] [INFO] HTTP request {"duration_ms":7203,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:53:13.357Z] [INFO] HTTP request {"duration_ms":7204,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:55:08.043Z] [INFO] HTTP request {"duration_ms":9845,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:55:08.043Z] [INFO] HTTP request {"duration_ms":9846,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:55:12.486Z] [INFO] HTTP request {"duration_ms":4305,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:55:12.487Z] [INFO] HTTP request {"duration_ms":4305,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:55:28.737Z] [INFO] HTTP request {"duration_ms":5442,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:55:28.737Z] [INFO] HTTP request {"duration_ms":5442,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:57:08.756Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T07:57:17.361Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T07:57:29.085Z] [INFO] HTTP request {"duration_ms":11725,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:57:29.085Z] [INFO] HTTP request {"duration_ms":11724,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:57:57.309Z] [INFO] HTTP request {"duration_ms":9845,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:57:57.309Z] [INFO] HTTP request {"duration_ms":9845,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:58:02.861Z] [INFO] HTTP request {"duration_ms":4476,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:58:02.862Z] [INFO] HTTP request {"duration_ms":4477,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T07:58:05.184Z] [WARN] Request failed {"message":"Model \"openai/gpt-oss-20b\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T07:58:05.186Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:58:05.186Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:58:16.432Z] [WARN] Request failed {"message":"Model \"openai/gpt-oss-20b\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T07:58:16.432Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:58:16.432Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:58:23.948Z] [WARN] Request failed {"message":"Model \"moonshotai/kimi-k2.6\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T07:58:23.948Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T07:58:23.949Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T08:00:25.819Z] [WARN] Request failed {"message":"Model \"openai/gpt-oss-120b\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T08:00:25.820Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T08:00:25.820Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T08:00:56.035Z] [WARN] Request failed {"message":"Model \"openai/gpt-oss-120b\" was not found on AI8.","method":"POST","path":"/v1/chat/completions","stack":null,"status":400}
+[2026-07-01T08:00:56.035Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T08:00:56.035Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T08:01:37.192Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T08:01:43.581Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T08:01:48.003Z] [INFO] HTTP request {"duration_ms":4423,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:01:48.003Z] [INFO] HTTP request {"duration_ms":4423,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:02:48.904Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T08:02:54.610Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T08:02:58.343Z] [INFO] HTTP request {"duration_ms":3734,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:02:58.343Z] [INFO] HTTP request {"duration_ms":3734,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:03:57.840Z] [INFO] HTTP request {"duration_ms":20812,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:03:57.841Z] [INFO] HTTP request {"duration_ms":20813,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:04:29.160Z] [INFO] HTTP request {"duration_ms":12957,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:04:29.160Z] [INFO] HTTP request {"duration_ms":12957,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:05:11.085Z] [INFO] HTTP request {"duration_ms":38221,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:05:11.086Z] [INFO] HTTP request {"duration_ms":38222,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:05:45.921Z] [INFO] HTTP request {"duration_ms":3603,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:05:45.922Z] [INFO] HTTP request {"duration_ms":3604,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:06:20.632Z] [INFO] HTTP request {"duration_ms":3795,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:06:20.632Z] [INFO] HTTP request {"duration_ms":3795,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:06:48.881Z] [INFO] HTTP request {"duration_ms":61507,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:06:48.881Z] [INFO] HTTP request {"duration_ms":61507,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:06:58.638Z] [INFO] HTTP request {"duration_ms":3273,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:06:58.638Z] [INFO] HTTP request {"duration_ms":3273,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:07:29.795Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":304}
+[2026-07-01T08:07:29.898Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":304}
+[2026-07-01T08:07:29.898Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":304}
+[2026-07-01T08:07:29.936Z] [INFO] HTTP request {"duration_ms":20,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T08:07:29.938Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":304}
+[2026-07-01T08:07:30.085Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
+[2026-07-01T08:07:30.086Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":304}
+[2026-07-01T08:07:53.566Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"PUT","path":"/admin/api/channels","status":200}
+[2026-07-01T08:08:00.359Z] [INFO] HTTP request {"duration_ms":6789,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models?refresh=true","status":200}
+[2026-07-01T08:08:04.488Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T08:08:16.230Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T08:08:30.286Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T08:08:32.653Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T08:09:01.901Z] [INFO] HTTP request {"duration_ms":108636,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:09:01.902Z] [INFO] HTTP request {"duration_ms":108637,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:09:19.807Z] [INFO] HTTP request {"duration_ms":14188,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:09:19.807Z] [INFO] HTTP request {"duration_ms":14187,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:09:38.465Z] [INFO] HTTP request {"duration_ms":8186,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:09:38.466Z] [INFO] HTTP request {"duration_ms":8187,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:09:59.976Z] [INFO] HTTP request {"duration_ms":14846,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:09:59.977Z] [INFO] HTTP request {"duration_ms":14847,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:10:25.348Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"PUT","path":"/admin/api/channels","status":200}
+[2026-07-01T08:10:29.677Z] [INFO] HTTP request {"duration_ms":4324,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models?refresh=true","status":200}
+[2026-07-01T08:10:45.212Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T08:10:45.849Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T08:10:50.270Z] [INFO] HTTP request {"duration_ms":4422,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T08:11:10.620Z] [INFO] HTTP request {"duration_ms":7486,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:11:10.620Z] [INFO] HTTP request {"duration_ms":7486,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:11:19.797Z] [INFO] HTTP request {"duration_ms":7212,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:11:19.797Z] [INFO] HTTP request {"duration_ms":7212,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:11:35.311Z] [INFO] HTTP request {"duration_ms":8426,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:11:35.312Z] [INFO] HTTP request {"duration_ms":8427,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:11:44.891Z] [INFO] HTTP request {"duration_ms":5008,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":502}
+[2026-07-01T08:11:44.891Z] [INFO] HTTP request {"duration_ms":5008,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":502}
+[2026-07-01T08:11:52.429Z] [INFO] HTTP request {"duration_ms":5653,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:11:52.430Z] [INFO] HTTP request {"duration_ms":5654,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:12:27.054Z] [INFO] HTTP request {"duration_ms":12513,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:12:27.054Z] [INFO] HTTP request {"duration_ms":12513,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:13:10.875Z] [INFO] HTTP request {"duration_ms":39770,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:13:10.875Z] [INFO] HTTP request {"duration_ms":39770,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:13:15.288Z] [INFO] HTTP request {"duration_ms":2230,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:13:15.288Z] [INFO] HTTP request {"duration_ms":2230,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:13:27.680Z] [INFO] HTTP request {"duration_ms":6752,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:13:27.680Z] [INFO] HTTP request {"duration_ms":6752,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:13:58.014Z] [INFO] HTTP request {"duration_ms":21619,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:13:58.015Z] [INFO] HTTP request {"duration_ms":21620,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:14:07.261Z] [INFO] HTTP request {"duration_ms":6446,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:14:07.262Z] [INFO] HTTP request {"duration_ms":6447,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:14:39.492Z] [INFO] HTTP request {"duration_ms":15992,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:14:39.493Z] [INFO] HTTP request {"duration_ms":15992,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:14:49.602Z] [INFO] HTTP request {"duration_ms":2432,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:14:49.603Z] [INFO] HTTP request {"duration_ms":2433,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:15:08.262Z] [INFO] HTTP request {"duration_ms":13698,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:15:08.263Z] [INFO] HTTP request {"duration_ms":13699,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:15:18.381Z] [INFO] HTTP request {"duration_ms":8779,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:15:18.381Z] [INFO] HTTP request {"duration_ms":8779,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:15:28.745Z] [INFO] HTTP request {"duration_ms":8761,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:15:28.746Z] [INFO] HTTP request {"duration_ms":8762,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:19:12.105Z] [INFO] HTTP request {"duration_ms":5080,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:19:12.106Z] [INFO] HTTP request {"duration_ms":5081,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:19:25.629Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T08:20:18.173Z] [INFO] HTTP request {"duration_ms":83126,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:20:18.174Z] [INFO] HTTP request {"duration_ms":83127,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:20:46.306Z] [INFO] HTTP request {"duration_ms":60684,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:20:46.307Z] [INFO] HTTP request {"duration_ms":60685,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:20:48.009Z] [INFO] HTTP request {"duration_ms":12818,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:20:48.009Z] [INFO] HTTP request {"duration_ms":12818,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:20:51.083Z] [INFO] HTTP request {"duration_ms":10344,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:20:51.083Z] [INFO] HTTP request {"duration_ms":10345,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:21:12.589Z] [INFO] HTTP request {"duration_ms":19001,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:21:12.589Z] [INFO] HTTP request {"duration_ms":19001,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:22:03.917Z] [INFO] HTTP request {"duration_ms":12478,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:22:03.917Z] [INFO] HTTP request {"duration_ms":12478,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:25:30.406Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T08:25:35.341Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T08:25:48.599Z] [INFO] HTTP request {"duration_ms":13259,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:25:48.600Z] [INFO] HTTP request {"duration_ms":13260,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:25:57.632Z] [INFO] HTTP request {"duration_ms":4715,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:25:57.632Z] [INFO] HTTP request {"duration_ms":4715,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:26:13.272Z] [INFO] HTTP request {"duration_ms":4,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":200}
+[2026-07-01T08:26:13.388Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":304}
+[2026-07-01T08:26:13.390Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":200}
+[2026-07-01T08:26:13.418Z] [INFO] HTTP request {"duration_ms":17,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T08:26:13.420Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":200}
+[2026-07-01T08:26:13.471Z] [INFO] HTTP request {"duration_ms":12282,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:26:13.472Z] [INFO] HTTP request {"duration_ms":12282,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:26:13.477Z] [INFO] HTTP request {"duration_ms":5,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
+[2026-07-01T08:26:13.479Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":200}
+[2026-07-01T08:26:46.038Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"PUT","path":"/admin/api/channels","status":200}
+[2026-07-01T08:26:56.015Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"PUT","path":"/admin/api/channels","status":200}
+[2026-07-01T08:27:11.131Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T08:27:23.911Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T08:28:17.291Z] [INFO] HTTP request {"duration_ms":3529,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:28:17.291Z] [INFO] HTTP request {"duration_ms":3529,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:30:07.079Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T08:30:10.656Z] [INFO] HTTP request {"duration_ms":4,"ip":"127.0.0.1","method":"PUT","path":"/admin/api/channels","status":200}
+[2026-07-01T08:30:36.771Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":304}
+[2026-07-01T08:30:36.871Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":304}
+[2026-07-01T08:30:36.876Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":200}
+[2026-07-01T08:30:36.912Z] [INFO] HTTP request {"duration_ms":19,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T08:30:36.913Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":200}
+[2026-07-01T08:30:37.048Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T08:30:37.072Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":200}
+[2026-07-01T08:30:40.457Z] [INFO] HTTP request {"duration_ms":3410,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
+[2026-07-01T08:32:13.409Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-07-01T08:33:27.296Z] [INFO] HTTP request {"duration_ms":3985,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:33:27.297Z] [INFO] HTTP request {"duration_ms":3985,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:33:40.038Z] [INFO] HTTP request {"duration_ms":9831,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":500}
+[2026-07-01T08:33:40.038Z] [INFO] HTTP request {"duration_ms":9831,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":500}
+[2026-07-01T08:33:42.850Z] [INFO] HTTP request {"duration_ms":976,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:33:42.851Z] [INFO] HTTP request {"duration_ms":977,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:33:46.921Z] [INFO] HTTP request {"duration_ms":663,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T08:33:46.922Z] [INFO] HTTP request {"duration_ms":664,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":400}
+[2026-07-01T08:34:04.058Z] [INFO] HTTP request {"duration_ms":12836,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:34:04.058Z] [INFO] HTTP request {"duration_ms":12836,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:34:26.673Z] [INFO] HTTP request {"duration_ms":2260,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:34:26.674Z] [INFO] HTTP request {"duration_ms":2261,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:34:30.164Z] [INFO] HTTP request {"duration_ms":23099,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:34:30.165Z] [INFO] HTTP request {"duration_ms":23100,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:34:35.421Z] [INFO] HTTP request {"duration_ms":4769,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:34:35.421Z] [INFO] HTTP request {"duration_ms":4769,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:34:40.281Z] [INFO] HTTP request {"duration_ms":1008,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:34:40.281Z] [INFO] HTTP request {"duration_ms":1007,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:34:43.716Z] [INFO] HTTP request {"duration_ms":799,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:34:43.716Z] [INFO] HTTP request {"duration_ms":799,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:34:52.971Z] [INFO] HTTP request {"duration_ms":2944,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:34:52.972Z] [INFO] HTTP request {"duration_ms":2944,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:35:07.726Z] [INFO] HTTP request {"duration_ms":4576,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:35:07.727Z] [INFO] HTTP request {"duration_ms":4577,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:35:31.242Z] [INFO] HTTP request {"duration_ms":11406,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":500}
+[2026-07-01T08:35:31.243Z] [INFO] HTTP request {"duration_ms":11407,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":500}
+[2026-07-01T08:35:49.322Z] [INFO] HTTP request {"duration_ms":24,"ip":"127.0.0.1","method":"HEAD","path":"/","status":200}
+[2026-07-01T08:35:53.273Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/messages/count_tokens?beta=true","status":404}
+[2026-07-01T08:35:54.462Z] [INFO] HTTP request {"duration_ms":1185,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:35:54.462Z] [INFO] HTTP request {"duration_ms":1185,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:35:56.607Z] [INFO] HTTP request {"duration_ms":2025,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:35:56.607Z] [INFO] HTTP request {"duration_ms":2025,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:36:08.260Z] [INFO] HTTP request {"duration_ms":20,"ip":"127.0.0.1","method":"HEAD","path":"/","status":200}
+[2026-07-01T08:36:12.366Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"POST","path":"/v1/messages/count_tokens?beta=true","status":404}
+[2026-07-01T08:36:14.604Z] [INFO] HTTP request {"duration_ms":2234,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:36:14.605Z] [INFO] HTTP request {"duration_ms":2235,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:36:16.446Z] [INFO] HTTP request {"duration_ms":1723,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:36:16.446Z] [INFO] HTTP request {"duration_ms":1723,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:36:33.733Z] [INFO] HTTP request {"duration_ms":21,"ip":"127.0.0.1","method":"HEAD","path":"/","status":200}
+[2026-07-01T08:36:37.894Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/messages/count_tokens?beta=true","status":404}
+[2026-07-01T08:36:46.090Z] [INFO] HTTP request {"duration_ms":8192,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:36:46.090Z] [INFO] HTTP request {"duration_ms":8193,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:37:15.508Z] [INFO] HTTP request {"duration_ms":29304,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:37:15.509Z] [INFO] HTTP request {"duration_ms":29305,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:37:30.352Z] [INFO] HTTP request {"duration_ms":9847,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:37:30.352Z] [INFO] HTTP request {"duration_ms":9847,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:37:49.344Z] [INFO] HTTP request {"duration_ms":20,"ip":"127.0.0.1","method":"HEAD","path":"/","status":200}
+[2026-07-01T08:37:53.283Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"POST","path":"/v1/messages/count_tokens?beta=true","status":404}
+[2026-07-01T08:37:54.795Z] [INFO] HTTP request {"duration_ms":1508,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:37:54.795Z] [INFO] HTTP request {"duration_ms":1508,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:37:56.359Z] [INFO] HTTP request {"duration_ms":1441,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:37:56.359Z] [INFO] HTTP request {"duration_ms":1441,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:38:10.666Z] [INFO] HTTP request {"duration_ms":19,"ip":"127.0.0.1","method":"HEAD","path":"/","status":200}
+[2026-07-01T08:38:20.890Z] [INFO] HTTP request {"duration_ms":20,"ip":"127.0.0.1","method":"HEAD","path":"/","status":200}
+[2026-07-01T08:38:26.008Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/messages/count_tokens?beta=true","status":404}
+[2026-07-01T08:38:28.528Z] [INFO] HTTP request {"duration_ms":2517,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:38:28.529Z] [INFO] HTTP request {"duration_ms":2518,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:38:29.704Z] [INFO] HTTP request {"duration_ms":1055,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:38:29.704Z] [INFO] HTTP request {"duration_ms":1055,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-07-01T08:44:45.152Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-07-01T08:49:05.533Z] [INFO] HTTP request {"duration_ms":28,"ip":"127.0.0.1","method":"HEAD","path":"/","status":200}
+[2026-07-01T08:49:09.569Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/v1/messages/count_tokens?beta=true","status":404}
+[2026-07-01T08:49:09.575Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-07-01T08:49:12.561Z] [INFO] HTTP request {"duration_ms":2987,"ip":"127.0.0.1","method":"POST","path":"/v1/messages?beta=true","status":404}
+[2026-07-01T08:49:13.135Z] [INFO] HTTP request {"duration_ms":457,"ip":"127.0.0.1","method":"POST","path":"/v1/messages?beta=true","status":404}
+[2026-07-01T08:49:14.159Z] [INFO] HTTP request {"duration_ms":1019,"ip":"127.0.0.1","method":"POST","path":"/v1/messages?beta=true","status":404}
