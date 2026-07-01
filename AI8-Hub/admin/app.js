@@ -21,6 +21,8 @@ const elements = {
     configForm: document.getElementById("configForm"),
     saveConfigButton: document.getElementById("saveConfigButton"),
     adminTokenConfig: document.getElementById("adminTokenConfig"),
+    ai8BaseUrl: document.getElementById("ai8BaseUrl"),
+    ai8AuthToken: document.getElementById("ai8AuthToken"),
     ai8DefaultModel: document.getElementById("ai8DefaultModel"),
     ai8RequestTimeoutMs: document.getElementById("ai8RequestTimeoutMs"),
     apiKeys: document.getElementById("apiKeys"),
@@ -245,6 +247,8 @@ async function saveGlobalConfig() {
         elements.saveConfigButton.textContent = "保存中...";
         const payload = {
             adminToken: elements.adminTokenConfig.value.trim(),
+            ai8AuthToken: elements.ai8AuthToken.value.trim(),
+            ai8BaseUrl: elements.ai8BaseUrl.value.trim(),
             ai8DefaultModel: elements.ai8DefaultModel.value.trim(),
             ai8RequestTimeoutMs: toNumberString(elements.ai8RequestTimeoutMs.value),
             apiKeys: elements.apiKeys.value.trim(),
@@ -673,6 +677,8 @@ function renderExample() {
 
 function renderConfig(config) {
     elements.adminTokenConfig.value = config.adminToken || "";
+    elements.ai8BaseUrl.value = config.ai8BaseUrl || "";
+    elements.ai8AuthToken.value = config.ai8AuthToken || "";
     elements.ai8DefaultModel.value = config.ai8DefaultModel || "";
     if (elements.ai8RequestTimeoutMs) elements.ai8RequestTimeoutMs.value = config.ai8RequestTimeoutMs || "";
     elements.apiKeys.value = config.apiKeys || "";
