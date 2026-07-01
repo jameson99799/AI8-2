@@ -204,7 +204,7 @@ function normalizeConfig(source = {}) {
         ai8XAppVersion: normalizeString(source.ai8XAppVersion || source.AI8_X_APP_VERSION || "3.0.1"),
         apiKeys: parseCsv(source.apiKeys ?? source.API_KEYS),
         mediaFetchTimeoutMs: parseNumber(source.mediaFetchTimeoutMs ?? source.MEDIA_FETCH_TIMEOUT_MS, 60000),
-        port: parseNumber(source.port ?? source.PORT, 7865),
+        port: parseNumber(process.env.PORT, 7865),
         publicBaseUrl: normalizeString(source.publicBaseUrl || source.PUBLIC_BASE_URL),
         requestBodyLimit: normalizeString(source.requestBodyLimit || source.REQUEST_BODY_LIMIT || "50mb"),
         ai8ImageModels: parseCsv(source.ai8ImageModels ?? source.AI8_IMAGE_MODELS ?? "gpt-image-1,gpt-image-2,dall-e-3"),
