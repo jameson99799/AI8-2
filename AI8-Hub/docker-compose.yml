@@ -8,6 +8,7 @@ services:
     env_file:
       - .env
     environment:
+      PORT: 7865
       AI8_CONFIG_PATH: /app/data/config.json
       AI8_LOG_PATH: /app/logs/ai8-hub.log
     ports:
