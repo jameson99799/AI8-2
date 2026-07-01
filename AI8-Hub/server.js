@@ -177,15 +177,19 @@ app.post("/admin/api/test-upstream", requireAdminAuth, asyncHandler(async (req, 
     const startedAt = Date.now();
     const config = getConfig();
     const client = getClient();
-    const models = await client.fetchModels({
-        forceRefresh: true,
-    });
+    const models = await fetchAggregatedModels(client, config, true, logger, true);
 
     let resolvedDefaultModel = null;
     let resolvedDefaultModelError = null;
 
     try {
-        resolvedDefaultModel = (await client.resolveModel(config.ai8DefaultModel)).value;
+        const agMatch = models.find(m => String(m.value) === String(config.ai8DefaultModel));
+        if (agMatch) {
+            resolvedDefaultModel = agMatch.value;
+        } else {
+            // Also attempt to check if it resolves cleanly as a direct string for legacy checks
+            resolvedDefaultModel = (await client.resolveModel(config.ai8DefaultModel)).value;
+        }
     } catch (error) {
         resolvedDefaultModelError = error.message;
     }

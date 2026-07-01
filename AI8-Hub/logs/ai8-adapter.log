@@ -689,3 +689,10 @@
 [2026-07-01T09:33:26.480Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":304}
 [2026-07-01T09:33:26.615Z] [INFO] HTTP request {"duration_ms":4,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
 [2026-07-01T09:33:26.616Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":304}
+[2026-07-01T09:53:13.348Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"GET","path":"/admin/","status":200}
+[2026-07-01T09:53:13.432Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/styles.css","status":304}
+[2026-07-01T09:53:13.434Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/admin/app.js","status":200}
+[2026-07-01T09:53:13.474Z] [INFO] HTTP request {"duration_ms":17,"ip":"127.0.0.1","method":"GET","path":"/admin/api/runtime","status":200}
+[2026-07-01T09:53:13.475Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":304}
+[2026-07-01T09:53:13.502Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":304}
+[2026-07-01T09:53:17.526Z] [INFO] HTTP request {"duration_ms":4026,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}

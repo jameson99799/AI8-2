@@ -14,7 +14,8 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
     let ai8Models = [];
     if (config.ai8Enabled !== false) {
         try {
-            ai8Models = await client.fetchModels({ forceRefresh });
+            const rawAi8Models = await client.fetchModels({ forceRefresh });
+            ai8Models = rawAi8Models.map(m => ({ ...m }));
             ai8Models.forEach(m => {
                 m._source = "ai8";
                 m.origId = m.value.replace(/【AI8直连】$/, ''); 
