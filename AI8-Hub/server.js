@@ -499,7 +499,15 @@ app.post("/v1/images/generations", asyncHandler(async (req, res) => {
     const created = Math.floor(Date.now() / 1000);
 
     const requestModel = String(body.model || config.ai8DefaultModel).trim();
-    const resolvedModel = await client.resolveModel(requestModel);
+    const resolved = await resolveTargetChannel(requestModel, config, client);
+    const targetChannel = resolved.targetChannel;
+    const actualModel = resolved.actualModel;
+    
+    if (targetChannel) {
+        throw createHttpError(400, "Native image generation proxying for custom channels is not supported yet.");
+    }
+    
+    const resolvedModel = await client.resolveModel(actualModel);
     
     // Construct a single message for image generation
     const messages = [{ role: "user", content: body.prompt }];
@@ -596,7 +604,15 @@ app.post("/v1/images/edits", asyncHandler(async (req, res) => {
     const created = Math.floor(Date.now() / 1000);
 
     const requestModel = String(body.model || config.ai8DefaultModel).trim();
-    const resolvedModel = await client.resolveModel(requestModel);
+    const resolved = await resolveTargetChannel(requestModel, config, client);
+    const targetChannel = resolved.targetChannel;
+    const actualModel = resolved.actualModel;
+    
+    if (targetChannel) {
+        throw createHttpError(400, "Native image edit proxying for custom channels is not supported yet.");
+    }
+
+    const resolvedModel = await client.resolveModel(actualModel);
 
     const preparedMessages = {
         files,
