@@ -154,6 +154,46 @@
                             <span>gpt-all 模型白名单 (逗号分隔, 留空=全部)</span>
                             <input id="gptallAllowedModels" autocomplete="off" placeholder="如 doubao-seed-2.0-lite,gpt-5.4-mini">
                         </label>
+                        <label class="field field-span-2">
+                            <span>gpt-all 模型黑名单 (逗号分隔)</span>
+                            <input id="gptallBlacklistedModels" autocomplete="off" placeholder="如 gpt-4o">
+                        </label>
+                        <div class="field field-span-2 config-section-divider">freegpt 独立渠道</div>
+                        <label class="field field-span-2">
+                            <span>freegpt 启用</span>
+                            <select id="freegptEnabled">
+                                <option value="true">启用</option>
+                                <option value="false">停用</option>
+                            </select>
+                        </label>
+                        <label class="field field-span-2">
+                            <span>freegpt UUID</span>
+                            <input id="freegptUuid" autocomplete="off" placeholder="freegpt.work 分配的令牌">
+                        </label>
+                        <label class="field field-span-2">
+                            <span>freegpt 基础地址</span>
+                            <input id="freegptBaseUrl" autocomplete="off" placeholder="默认: https://chat1.freegpt.work">
+                        </label>
+                        <label class="field field-span-2">
+                            <span>freegpt 客户端 IP</span>
+                            <input id="freegptClientIp" autocomplete="off" placeholder="留空=127.0.0.1">
+                        </label>
+                        <label class="field">
+                            <span>freegpt 请求超时毫秒</span>
+                            <input id="freegptRequestTimeoutMs" type="number" placeholder="300000">
+                        </label>
+                        <label class="field">
+                            <span>freegpt 默认模型</span>
+                            <input id="freegptDefaultModel" autocomplete="off" placeholder="如 gpt-4o-mini">
+                        </label>
+                        <label class="field field-span-2">
+                            <span>freegpt 模型白名单 (逗号分隔, 留空=全部)</span>
+                            <input id="freegptAllowedModels" autocomplete="off" placeholder="如 gpt-4o-mini,gpt-5.4-mini">
+                        </label>
+                        <label class="field field-span-2">
+                            <span>freegpt 模型黑名单 (逗号分隔)</span>
+                            <input id="freegptBlacklistedModels" autocomplete="off" placeholder="如 gpt-4o">
+                        </label>
                     </form>
                 </div>
             </section>

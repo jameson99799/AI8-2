@@ -11,6 +11,8 @@ function makeModels() {
         { origId: "ai8-b", _source: "ai8", attr: { providerName: "ai8" } },
         { origId: "gpt1", _source: "gptall", attr: { providerName: "gpt-all" } },
         { origId: "gpt2", _source: "gptall", attr: { providerName: "gpt-all" } },
+        { origId: "fg1", _source: "freegpt", attr: { providerName: "freegpt" } },
+        { origId: "fg2", _source: "freegpt", attr: { providerName: "freegpt" } },
         { origId: "deep1", _source: "custom1", attr: { providerName: "custom1" } },
         { origId: "deep2", _source: "custom1", attr: { providerName: "custom1" } },
     ];
@@ -21,10 +23,11 @@ test("filterCachedModels returns all models for admin regardless of filters", ()
         blacklistedModels: ["deep1"],
         ai8BlacklistedModels: ["ai8-a"],
         gptallBlacklistedModels: ["gpt1"],
+        freegptBlacklistedModels: ["fg1"],
         customChannels: [{ name: "custom1", enabled: true, blacklistedModels: ["deep2"] }],
     };
     const result = filterCachedModels(makeModels(), config, true);
-    assert.equal(result.length, 6);
+    assert.equal(result.length, 8);
 });
 
 test("filterCachedModels applies global blacklist by aggregated id", () => {
@@ -62,6 +65,18 @@ test("filterCachedModels applies gptall blacklist", () => {
     assert.ok(result.some(m => m.origId === "gpt2"));
 });
 
+test("filterCachedModels applies freegpt blacklist", () => {
+    const config = {
+        ai8BlacklistedModels: [],
+        gptallBlacklistedModels: [],
+        freegptBlacklistedModels: ["fg1"],
+        customChannels: [],
+    };
+    const result = filterCachedModels(makeModels(), config, false);
+    assert.ok(!result.some(m => m.origId === "fg1"));
+    assert.ok(result.some(m => m.origId === "fg2"));
+});
+
 test("filterCachedModels applies custom channel blacklist while keeping channel models", () => {
     const config = {
         ai8BlacklistedModels: [],
@@ -96,6 +111,13 @@ test("isBlacklisted checks gpt-all blacklist by channel name", () => {
     const channel = { name: "gpt-all", protocol: "gptall" };
     assert.equal(isBlacklisted("gpt1", config, channel), true);
     assert.equal(isBlacklisted("gpt2", config, channel), false);
+});
+
+test("isBlacklisted checks freegpt blacklist by channel name", () => {
+    const config = { freegptBlacklistedModels: ["fg1"], ai8BlacklistedModels: [] };
+    const channel = { name: "freegpt", protocol: "freegpt" };
+    assert.equal(isBlacklisted("fg1", config, channel), true);
+    assert.equal(isBlacklisted("fg2", config, channel), false);
 });
 
 test("isBlacklisted checks ai8 blacklist when no target channel", () => {

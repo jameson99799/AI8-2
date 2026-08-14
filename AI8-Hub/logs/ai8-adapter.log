@@ -696,3 +696,111 @@
 [2026-07-01T09:53:13.475Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/config","status":304}
 [2026-07-01T09:53:13.502Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/admin/api/channels","status":304}
 [2026-07-01T09:53:17.526Z] [INFO] HTTP request {"duration_ms":4026,"ip":"127.0.0.1","method":"GET","path":"/admin/api/models","status":200}
+[2026-08-06T01:42:00.151Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:17999","port":17999}
+[2026-08-06T01:42:00.313Z] [INFO] HTTP request {"duration_ms":9,"ip":"127.0.0.1","method":"GET","path":"/health","status":200}
+[2026-08-06T01:42:00.331Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-08-06T01:42:25.822Z] [INFO] HTTP request {"duration_ms":25491,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-08-06T01:42:25.822Z] [INFO] HTTP request {"duration_ms":20466,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-08-06T01:44:32.102Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:17999","port":17999}
+[2026-08-06T01:44:32.384Z] [INFO] HTTP request {"duration_ms":7,"ip":"127.0.0.1","method":"GET","path":"/health","status":200}
+[2026-08-06T01:44:32.397Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-08-06T01:44:55.216Z] [INFO] HTTP request {"duration_ms":22818,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-08-06T01:44:55.216Z] [INFO] HTTP request {"duration_ms":17796,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-08-06T01:45:22.622Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:17999","port":17999}
+[2026-08-06T01:45:22.907Z] [INFO] HTTP request {"duration_ms":10,"ip":"127.0.0.1","method":"GET","path":"/health","status":200}
+[2026-08-06T01:45:22.920Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-08-06T01:45:36.995Z] [INFO] HTTP request {"duration_ms":14075,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-08-06T01:45:36.995Z] [INFO] HTTP request {"duration_ms":9042,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}
+[2026-08-06T03:15:57.069Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-08-06T05:10:42.639Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7899","port":7899}
+[2026-08-06T05:10:42.641Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-08-06T05:10:42.868Z] [WARN] Failed to fetch models for channel agnes-ai {"error":"TypeError: fetch failed"}
+[2026-08-06T05:10:42.869Z] [WARN] Failed to fetch AI8 models {"error":"Error: 授权登陆已过期，请重新登陆"}
+[2026-08-06T05:10:43.309Z] [INFO] HTTP request {"duration_ms":7,"ip":"127.0.0.1","method":"GET","path":"/health","status":200}
+[2026-08-06T05:10:43.384Z] [INFO] HTTP request {"duration_ms":7,"ip":"127.0.0.1","method":"GET","path":"/health","status":200}
+[2026-08-06T05:10:54.379Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7865","port":7865}
+[2026-08-06T05:10:54.381Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-08-06T05:10:54.616Z] [WARN] Failed to fetch models for channel agnes-ai {"error":"TypeError: fetch failed"}
+[2026-08-06T05:10:54.811Z] [WARN] Failed to fetch AI8 models {"error":"Error: 授权登陆已过期，请重新登陆"}
+[2026-08-06T05:11:11.887Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7898","port":7898}
+[2026-08-06T05:11:11.889Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-08-06T05:11:12.106Z] [WARN] Failed to fetch models for channel agnes-ai {"error":"TypeError: fetch failed"}
+[2026-08-06T05:11:12.272Z] [WARN] Failed to fetch AI8 models {"error":"Error: 授权登陆已过期，请重新登陆"}
+[2026-08-06T05:11:13.786Z] [INFO] HTTP request {"duration_ms":7,"ip":"127.0.0.1","method":"GET","path":"/health","status":200}
+[2026-08-06T05:11:13.821Z] [INFO] HTTP request {"duration_ms":5,"ip":"127.0.0.1","method":"GET","path":"/health","status":200}
+[2026-08-06T05:11:13.855Z] [INFO] HTTP request {"duration_ms":5,"ip":"127.0.0.1","method":"GET","path":"/health","status":200}
+[2026-08-06T05:11:22.967Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7897","port":7897}
+[2026-08-06T05:11:22.970Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-08-06T05:11:23.171Z] [WARN] Failed to fetch AI8 models {"error":"Error: 授权登陆已过期，请重新登陆"}
+[2026-08-06T05:11:24.744Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-06T05:11:24.773Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:12.285Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7899","port":7899}
+[2026-08-14T07:44:12.287Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-08-14T07:44:12.570Z] [WARN] Failed to fetch AI8 models {"error":"Error: 授权登陆已过期，请重新登陆"}
+[2026-08-14T07:44:12.598Z] [INFO] HTTP request {"duration_ms":3,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:13.103Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:13.604Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:14.106Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:14.607Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:15.109Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:15.610Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:16.111Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:16.612Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:17.113Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:17.614Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:18.116Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:18.617Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:19.120Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:19.621Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:20.123Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:20.624Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:21.127Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:21.629Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:22.129Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:22.631Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:23.134Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:23.636Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:24.138Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:24.639Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:25.141Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:25.642Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:26.143Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:26.645Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:40.954Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7899","port":7899}
+[2026-08-14T07:44:40.955Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-08-14T07:44:41.198Z] [WARN] Failed to fetch AI8 models {"error":"Error: 授权登陆已过期，请重新登陆"}
+[2026-08-14T07:44:41.272Z] [INFO] HTTP request {"duration_ms":2,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:41.778Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:42.280Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:42.782Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:43.284Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:43.787Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:44.290Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:44.791Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:45.293Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:45.795Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:46.296Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:46.798Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:47.301Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:47.802Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:48.303Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:48.804Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:49.307Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:49.809Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:50.311Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:50.813Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:51.315Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:51.817Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:52.319Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:52.820Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:53.322Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:53.823Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:54.325Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:54.827Z] [INFO] HTTP request {"duration_ms":1,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:44:55.328Z] [INFO] HTTP request {"duration_ms":0,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":401}
+[2026-08-14T07:45:16.204Z] [INFO] AI8 adapter listening {"adminUrl":"/admin","bind":"0.0.0.0:7899","port":7899}
+[2026-08-14T07:45:16.205Z] [INFO] AI8 client refreshed {"ai8BaseUrl":"https://ai8.rcouyi.com/api","ai8DefaultModel":"openai_chat::gpt-4.1-mini","requestTimeoutMs":300000}
+[2026-08-14T07:45:16.387Z] [WARN] Failed to fetch AI8 models {"error":"Error: 授权登陆已过期，请重新登陆"}
+[2026-08-14T07:45:16.659Z] [WARN] Failed to fetch AI8 models {"error":"Error: 授权登陆已过期，请重新登陆"}
+[2026-08-14T07:45:18.637Z] [INFO] HTTP request {"duration_ms":2121,"ip":"127.0.0.1","method":"GET","path":"/v1/models","status":200}
+[2026-08-14T07:45:22.513Z] [INFO] HTTP request {"duration_ms":3862,"ip":"127.0.0.1","method":"POST","path":"/v1/chat/completions","status":200}

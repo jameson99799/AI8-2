@@ -43,6 +43,14 @@ const elements = {
     gptallDefaultModel: document.getElementById("gptallDefaultModel"),
     gptallAllowedModels: document.getElementById("gptallAllowedModels"),
     gptallRequestTimeoutMs: document.getElementById("gptallRequestTimeoutMs"),
+    freegptEnabled: document.getElementById("freegptEnabled"),
+    freegptUuid: document.getElementById("freegptUuid"),
+    freegptBaseUrl: document.getElementById("freegptBaseUrl"),
+    freegptClientIp: document.getElementById("freegptClientIp"),
+    freegptDefaultModel: document.getElementById("freegptDefaultModel"),
+    freegptAllowedModels: document.getElementById("freegptAllowedModels"),
+    freegptBlacklistedModels: document.getElementById("freegptBlacklistedModels"),
+    freegptRequestTimeoutMs: document.getElementById("freegptRequestTimeoutMs"),
     
     // Import / Export
     exportConfigBtn: document.getElementById("exportConfigBtn"),
@@ -278,6 +286,14 @@ async function saveGlobalConfig() {
             gptallDefaultModel: elements.gptallDefaultModel.value.trim(),
             gptallAllowedModels: elements.gptallAllowedModels.value.trim(),
             gptallRequestTimeoutMs: toNumberString(elements.gptallRequestTimeoutMs.value),
+            freegptEnabled: elements.freegptEnabled.value === "true",
+            freegptUuid: elements.freegptUuid.value.trim(),
+            freegptBaseUrl: elements.freegptBaseUrl.value.trim(),
+            freegptClientIp: elements.freegptClientIp.value.trim(),
+            freegptDefaultModel: elements.freegptDefaultModel.value.trim(),
+            freegptAllowedModels: elements.freegptAllowedModels.value.trim(),
+            freegptBlacklistedModels: elements.freegptBlacklistedModels.value.trim(),
+            freegptRequestTimeoutMs: toNumberString(elements.freegptRequestTimeoutMs.value),
         };
 
         const response = await requestJson("/admin/api/config", {
@@ -1004,6 +1020,14 @@ function renderConfig(config) {
     if (elements.gptallDefaultModel) elements.gptallDefaultModel.value = config.gptallDefaultModel || "";
     if (elements.gptallAllowedModels) elements.gptallAllowedModels.value = config.gptallAllowedModels || "";
     if (elements.gptallRequestTimeoutMs) elements.gptallRequestTimeoutMs.value = config.gptallRequestTimeoutMs || "";
+    if (elements.freegptEnabled) elements.freegptEnabled.value = config.freegptEnabled === true ? "true" : "false";
+    if (elements.freegptUuid) elements.freegptUuid.value = config.freegptUuid || "";
+    if (elements.freegptBaseUrl) elements.freegptBaseUrl.value = config.freegptBaseUrl || "";
+    if (elements.freegptClientIp) elements.freegptClientIp.value = config.freegptClientIp || "";
+    if (elements.freegptDefaultModel) elements.freegptDefaultModel.value = config.freegptDefaultModel || "";
+    if (elements.freegptAllowedModels) elements.freegptAllowedModels.value = config.freegptAllowedModels || "";
+    if (elements.freegptBlacklistedModels) elements.freegptBlacklistedModels.value = config.freegptBlacklistedModels || "";
+    if (elements.freegptRequestTimeoutMs) elements.freegptRequestTimeoutMs.value = config.freegptRequestTimeoutMs || "";
 }
 
 async function loadLogs() {

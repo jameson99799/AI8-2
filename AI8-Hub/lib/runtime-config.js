@@ -36,6 +36,14 @@ const EDITABLE_FIELDS = [
     "gptallBlacklistedModels",
     "gptallRequestTimeoutMs",
     "gptallDeleteGroupAfterResponse",
+    "freegptEnabled",
+    "freegptBaseUrl",
+    "freegptUuid",
+    "freegptClientIp",
+    "freegptDefaultModel",
+    "freegptAllowedModels",
+    "freegptBlacklistedModels",
+    "freegptRequestTimeoutMs",
 ];
 
 class RuntimeConfigStore {
@@ -123,6 +131,14 @@ class RuntimeConfigStore {
             gptallBlacklistedModels: this.runtimeConfig.gptallBlacklistedModels.join(","),
             gptallRequestTimeoutMs: this.runtimeConfig.gptallRequestTimeoutMs,
             gptallDeleteGroupAfterResponse: this.runtimeConfig.gptallDeleteGroupAfterResponse,
+            freegptEnabled: this.runtimeConfig.freegptEnabled,
+            freegptBaseUrl: this.runtimeConfig.freegptBaseUrl,
+            freegptUuid: this.runtimeConfig.freegptUuid,
+            freegptClientIp: this.runtimeConfig.freegptClientIp,
+            freegptDefaultModel: this.runtimeConfig.freegptDefaultModel,
+            freegptAllowedModels: this.runtimeConfig.freegptAllowedModels.join(","),
+            freegptBlacklistedModels: this.runtimeConfig.freegptBlacklistedModels.join(","),
+            freegptRequestTimeoutMs: this.runtimeConfig.freegptRequestTimeoutMs,
         };
     }
 
@@ -174,6 +190,14 @@ class RuntimeConfigStore {
             gptallBlacklistedModels: process.env.GPTALL_BLACKLISTED_MODELS,
             gptallRequestTimeoutMs: process.env.GPTALL_REQUEST_TIMEOUT_MS,
             gptallDeleteGroupAfterResponse: process.env.GPTALL_DELETE_GROUP_AFTER_RESPONSE,
+            freegptEnabled: process.env.FREEGPT_ENABLED,
+            freegptBaseUrl: process.env.FREEGPT_BASE_URL,
+            freegptUuid: process.env.FREEGPT_UUID,
+            freegptClientIp: process.env.FREEGPT_CLIENT_IP,
+            freegptDefaultModel: process.env.FREEGPT_DEFAULT_MODEL,
+            freegptAllowedModels: process.env.FREEGPT_ALLOWED_MODELS,
+            freegptBlacklistedModels: process.env.FREEGPT_BLACKLISTED_MODELS,
+            freegptRequestTimeoutMs: process.env.FREEGPT_REQUEST_TIMEOUT_MS,
             ...defaults,
         };
     }
@@ -269,6 +293,17 @@ function normalizeConfig(source = {}) {
         gptallDeleteGroupAfterResponse: parseBoolean(
             source.gptallDeleteGroupAfterResponse ?? source.GPTALL_DELETE_GROUP_AFTER_RESPONSE,
             true
+        ),
+        freegptEnabled: parseBoolean(source.freegptEnabled ?? source.FREEGPT_ENABLED, false),
+        freegptBaseUrl: normalizeString(source.freegptBaseUrl || source.FREEGPT_BASE_URL || "https://chat1.freegpt.work"),
+        freegptUuid: normalizeString(source.freegptUuid || source.FREEGPT_UUID),
+        freegptClientIp: normalizeString(source.freegptClientIp || source.FREEGPT_CLIENT_IP),
+        freegptDefaultModel: normalizeString(source.freegptDefaultModel || source.FREEGPT_DEFAULT_MODEL || "gpt-4o-mini"),
+        freegptAllowedModels: parseCsv(source.freegptAllowedModels ?? source.FREEGPT_ALLOWED_MODELS ?? ""),
+        freegptBlacklistedModels: parseCsv(source.freegptBlacklistedModels ?? source.FREEGPT_BLACKLISTED_MODELS ?? ""),
+        freegptRequestTimeoutMs: parseNumber(
+            source.freegptRequestTimeoutMs ?? source.FREEGPT_REQUEST_TIMEOUT_MS,
+            300000
         ),
     };
 }

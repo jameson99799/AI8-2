@@ -36,7 +36,7 @@ const {
     openAiToAnthropicChunk,
     openAiToAnthropicResponse,
 } = require("./lib/anthropic-format");
-const { buildGptAllClient, fetchAggregatedModels, proxyToCustomChannel, resolveTargetChannel, isBlacklisted } = require("./lib/channel-manager");
+const { buildFreeGptClient, buildGptAllClient, fetchAggregatedModels, proxyToCustomChannel, resolveTargetChannel, isBlacklisted } = require("./lib/channel-manager");
 const toolMarker = require("./lib/tool-marker");
 const { initHttpPool } = require("./lib/http-pool");
 
@@ -60,6 +60,11 @@ const clientState = {
 };
 
 const gptallClientState = {
+    instance: null,
+    signature: "",
+};
+
+const freegptClientState = {
     instance: null,
     signature: "",
 };
@@ -438,6 +443,10 @@ async function handleChatCompletion(req, res, body) {
     
     if (targetChannel?.protocol === "gptall") {
         return handleGptAllChatCompletion(req, res, actualModel, body, config, resolved.toolSupported);
+    }
+
+    if (targetChannel?.protocol === "freegpt") {
+        return handleFreeGptChatCompletion(req, res, actualModel, body, config);
     }
 
     if (targetChannel) {
@@ -1041,6 +1050,186 @@ function getGptAllClient() {
     return gptallClientState.instance;
 }
 
+function getFreeGptClient() {
+    const config = getConfig();
+    const signature = JSON.stringify([
+        config.freegptEnabled,
+        config.freegptBaseUrl,
+        config.freegptUuid,
+        config.freegptClientIp,
+        config.freegptDefaultModel,
+        config.freegptRequestTimeoutMs,
+    ]);
+    if (!freegptClientState.instance || freegptClientState.signature !== signature) {
+        if (!config.freegptUuid) {
+            throw createHttpError(502, "freegpt channel is not configured: FREEGPT_UUID is missing.");
+        }
+        freegptClientState.instance = buildFreeGptClient(config);
+        freegptClientState.signature = signature;
+    }
+    return freegptClientState.instance;
+}
+
+async function handleFreeGptChatCompletion(req, res, model, body, config) {
+    const freegptClient = getFreeGptClient();
+    const created = Math.floor(Date.now() / 1000);
+    const completionId = randomId("chatcmpl");
+    const requestModel = String(body.model || model || config.freegptDefaultModel || "").trim();
+
+    const preparedMessages = await prepareMessages(body.messages, false, {
+        mediaFetchTimeoutMs: config.mediaFetchTimeoutMs,
+    });
+
+    const systemPrompt = String(preparedMessages.systemPrompt || "").trim();
+    const promptParts = [];
+    if (systemPrompt) {
+        promptParts.push(`System prompt:\n${systemPrompt}`);
+    }
+    promptParts.push(preparedMessages.text);
+    const prompt = promptParts.filter(Boolean).join("\n\n");
+
+    const actualModel = String(model || requestModel).trim();
+
+    if (body.stream) {
+        const abortController = new AbortController();
+        req.on("close", () => abortController.abort());
+
+        let streamedContent = "";
+
+        res.status(200);
+        res.setHeader("Cache-Control", "no-cache, no-transform");
+        res.setHeader("Connection", "keep-alive");
+        res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+        if (typeof res.flushHeaders === "function") {
+            res.flushHeaders();
+        }
+
+        writeSse(
+            res,
+            buildChatCompletionChunk({
+                created,
+                delta: {
+                    content: "",
+                    role: "assistant",
+                },
+                id: completionId,
+                model: requestModel,
+            })
+        );
+
+        try {
+            await freegptClient.streamChatCompletion(
+                {
+                    model: actualModel,
+                    text: prompt,
+                    signal: abortController.signal,
+                    timeoutMs: STREAM_TIMEOUT_MS,
+                },
+                {
+                    onText(chunk) {
+                        streamedContent += chunk;
+                        writeSse(
+                            res,
+                            buildChatCompletionChunk({
+                                created,
+                                delta: {
+                                    content: chunk,
+                                },
+                                id: completionId,
+                                model: requestModel,
+                            })
+                        );
+                    },
+                }
+            );
+        } catch (error) {
+            if (abortController.signal.aborted) {
+                res.end();
+                return;
+            }
+            res.write(buildSseErrorEvent(error, requestModel));
+            res.end();
+            return;
+        }
+
+        if (!streamedContent) {
+            res.write(buildSseErrorEvent(new Error("freegpt returned an empty response."), requestModel));
+            res.end();
+            return;
+        }
+
+        writeSse(
+            res,
+            buildChatCompletionChunk({
+                created,
+                delta: {},
+                finishReason: "stop",
+                id: completionId,
+                model: requestModel,
+            })
+        );
+
+        if (body?.stream_options?.include_usage) {
+            writeSse(
+                res,
+                buildChatCompletionChunk({
+                    created,
+                    delta: {},
+                    finishReason: null,
+                    id: completionId,
+                    model: requestModel,
+                    usage: normalizeUsage({ useTokens: streamedContent.length }),
+                })
+            );
+        }
+
+        res.write("data: [DONE]\n\n");
+        res.end();
+        return;
+    }
+
+    const abortController = new AbortController();
+    req.on("close", () => abortController.abort());
+
+    let streamResult;
+    try {
+        streamResult = await freegptClient.streamChatCompletion(
+            {
+                model: actualModel,
+                text: prompt,
+                signal: abortController.signal,
+                timeoutMs: STREAM_TIMEOUT_MS,
+            }
+        );
+    } catch (error) {
+        if (abortController.signal.aborted) {
+            throw createHttpError(499, "Request aborted.");
+        }
+        throw error;
+    }
+
+    const finalContent = String(streamResult?.content || "").trim();
+    if (!finalContent) {
+        throw createHttpError(502, "freegpt returned an empty response.");
+    }
+    const images = extractAi8Images(finalContent);
+
+    res.json(
+        buildChatCompletion({
+            content: finalContent,
+            created,
+            id: completionId,
+            images,
+            metadata: buildAi8Metadata({
+                imageCount: images.length,
+                channel: "freegpt",
+            }),
+            model: requestModel,
+            usage: normalizeUsage(streamResult?.record),
+        })
+    );
+}
+
 async function handleGptAllChatCompletion(req, res, model, body, config, resolvedToolSupported = null) {
     const gptallClient = getGptAllClient();
     const created = Math.floor(Date.now() / 1000);
@@ -1147,21 +1336,21 @@ async function handleGptAllChatCompletion(req, res, model, body, config, resolve
                 res.end();
                 return;
             }
-            writeSse(res, buildSseErrorEvent(error, requestModel));
+            res.write(buildSseErrorEvent(error, requestModel));
             res.end();
             return;
         }
 
         const failureInfo = gptAllFailureInfo(finalRecord);
         if (failureInfo) {
-            writeSse(res, buildSseErrorEvent(new Error(failureInfo.message), requestModel));
+            res.write(buildSseErrorEvent(new Error(failureInfo.message), requestModel));
             res.end();
             return;
         }
 
         let finalContent = resolveFinalContent(finalRecord, streamedContent);
         if (!finalContent && !finalRecord) {
-            writeSse(res, buildSseErrorEvent(new Error("gpt-all returned an empty response."), requestModel));
+            res.write(buildSseErrorEvent(new Error("gpt-all returned an empty response."), requestModel));
             res.end();
             return;
         }
@@ -1555,6 +1744,7 @@ function buildRuntimeSnapshot(req) {
             local_api_protected: config.apiKeys.length > 0,
             upstream_ready: Boolean(config.ai8AuthToken),
             gptall_ready: Boolean(config.gptallAuthToken) && config.gptallEnabled !== false,
+            freegpt_ready: Boolean(config.freegptUuid) && config.freegptEnabled !== false,
         },
         config: {
             ai8_base_url: config.ai8BaseUrl,
@@ -1571,6 +1761,10 @@ function buildRuntimeSnapshot(req) {
             gptall_enabled: config.gptallEnabled ?? false,
             gptall_base_url: config.gptallBaseUrl,
             gptall_default_model: config.gptallDefaultModel,
+            freegpt_configured: Boolean(config.freegptUuid),
+            freegpt_enabled: config.freegptEnabled ?? false,
+            freegpt_base_url: config.freegptBaseUrl,
+            freegpt_default_model: config.freegptDefaultModel,
         },
         network: {
             base_url_candidates: baseUrlCandidates,

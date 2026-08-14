@@ -1,6 +1,7 @@
 "use strict";
 
 const GptAllClient = require("./gptall-client");
+const FreeGptClient = require("./freegpt-client");
 
 function buildGptAllClient(config) {
     if (!config || !config.gptallAuthToken) {
@@ -14,6 +15,19 @@ function buildGptAllClient(config) {
         defaultModel: config.gptallDefaultModel,
         deleteGroupAfterResponse: config.gptallDeleteGroupAfterResponse,
         requestTimeoutMs: config.gptallRequestTimeoutMs,
+    });
+}
+
+function buildFreeGptClient(config) {
+    if (!config || !config.freegptUuid) {
+        throw new Error("FREEGPT_UUID is not configured.");
+    }
+    return new FreeGptClient({
+        baseUrl: config.freegptBaseUrl,
+        uuid: config.freegptUuid,
+        clientIp: config.freegptClientIp,
+        defaultModel: config.freegptDefaultModel,
+        requestTimeoutMs: config.freegptRequestTimeoutMs,
     });
 }
 
@@ -58,6 +72,17 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
         );
     }
 
+    if (config.freegptEnabled !== false && config.freegptUuid) {
+        fetchTasks.push(
+            buildFreeGptClient(config).fetchModels()
+                .then(freegptModels => freegptModels || [])
+                .catch(e => {
+                    if (logger) logger.warn("Failed to fetch freegpt models", { error: String(e) });
+                    return [];
+                })
+        );
+    }
+
     const customChannelTasks = (config.customChannels || [])
         .filter(channel => channel.enabled)
         .map(channel => {
@@ -83,8 +108,9 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
 
     const ai8Requested = config.ai8Enabled !== false;
     const gptallRequested = config.gptallEnabled !== false && config.gptallAuthToken;
+    const freegptRequested = config.freegptEnabled !== false && config.freegptUuid;
 
-    // Run ai8, gptall and all custom channels in parallel.
+    // Run ai8, gptall, freegpt and all custom channels in parallel.
     // Resolve by index instead of positional destructuring so an absent gptall
     // task cannot swallow the first custom-channel result (which is a
     // `{ channel, models }` object, not an array).
@@ -93,9 +119,13 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
     let offset = 0;
     const ai8Models = ai8Requested ? results[offset++] || [] : [];
     let gptallModels = gptallRequested ? results[offset++] || [] : [];
+    let freegptModels = freegptRequested ? results[offset++] || [] : [];
     const customResults = results.slice(offset);
     if (!Array.isArray(gptallModels)) {
         gptallModels = [];
+    }
+    if (!Array.isArray(freegptModels)) {
+        freegptModels = [];
     }
 
     const allModels = [];
@@ -125,6 +155,22 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
                 _source: "gptall",
                 _actualModel: origId,
                 _isToolSupported: gptallModel.isToolSupported === true,
+            });
+        }
+    }
+
+    for (const freegptModel of (freegptModels || [])) {
+        const origId = String(freegptModel.value || freegptModel.model || "").trim();
+        if (origId && !allModels.some(m => m._source === "freegpt" && m.origId === origId)) {
+            const modelId = `${origId}【freegpt】`;
+            allModels.push({
+                label: modelId,
+                value: modelId,
+                origId,
+                channel: "freegpt",
+                attr: { providerName: "freegpt" },
+                _source: "freegpt",
+                _actualModel: origId,
             });
         }
     }
@@ -175,6 +221,13 @@ function filterCachedModels(models, config, forAdmin) {
             if (gptallBlacklist !== null && gptallBlacklist.includes(m.origId)) return false;
             return true;
         }
+        if (m._source === "freegpt") {
+            const freegptWhitelist = Array.isArray(config.freegptAllowedModels) && config.freegptAllowedModels.length > 0 ? config.freegptAllowedModels : null;
+            if (freegptWhitelist !== null && !freegptWhitelist.includes(m.origId)) return false;
+            const freegptBlacklist = Array.isArray(config.freegptBlacklistedModels) && config.freegptBlacklistedModels.length > 0 ? config.freegptBlacklistedModels : null;
+            if (freegptBlacklist !== null && freegptBlacklist.includes(m.origId)) return false;
+            return true;
+        }
         const channel = (config.customChannels || []).find(c => c.name === m._source);
         if (!channel) return false;
         if (!channel.enabled) return false;
@@ -189,6 +242,10 @@ function filterCachedModels(models, config, forAdmin) {
 function isBlacklisted(requestModel, config, targetChannel) {
     if (targetChannel && targetChannel.name === "gpt-all") {
         const list = Array.isArray(config.gptallBlacklistedModels) ? config.gptallBlacklistedModels : [];
+        return list.includes(requestModel);
+    }
+    if (targetChannel && targetChannel.name === "freegpt") {
+        const list = Array.isArray(config.freegptBlacklistedModels) ? config.freegptBlacklistedModels : [];
         return list.includes(requestModel);
     }
     if (targetChannel) {
@@ -235,6 +292,13 @@ async function resolveTargetChannelUncached(requestModel, config, client, logger
                 toolSupported: lookupGptAllToolSupport(actualModel, requestModel),
             };
         }
+        if (channelName === "freegpt" || channelName === "free-gpt") {
+            return {
+                targetChannel: { protocol: "freegpt", name: "freegpt" },
+                actualModel,
+                toolSupported: null,
+            };
+        }
     }
     
     // 2. Try to find in cache for unprefixed models
@@ -250,6 +314,9 @@ async function resolveTargetChannelUncached(requestModel, config, client, logger
             targetChannel = { protocol: "gptall", name: "gpt-all" };
             actualModel = cached._actualModel || requestModel;
             toolSupported = cached._isToolSupported === true;
+        } else if (cached && cached._source === "freegpt") {
+            targetChannel = { protocol: "freegpt", name: "freegpt" };
+            actualModel = cached._actualModel || requestModel;
         } else if (cached && cached._source !== "ai8") {
             const customChannels = config.customChannels || [];
             targetChannel = customChannels.find(c => c.name === cached._source && c.enabled);
@@ -363,4 +430,4 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
     }
 }
 
-module.exports = { buildGptAllClient, clearResolutionCache, fetchAggregatedModels, proxyToCustomChannel, resolveTargetChannel, isBlacklisted, filterCachedModels };
+module.exports = { buildGptAllClient, buildFreeGptClient, clearResolutionCache, fetchAggregatedModels, proxyToCustomChannel, resolveTargetChannel, isBlacklisted, filterCachedModels };
