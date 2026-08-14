@@ -182,7 +182,7 @@ test("streamChatCompletion refreshes the challenge and retries once on a secure 
 
     const result = await client.streamChatCompletion({ model: "gpt-4o-mini", messages: [{ role: "user", content: "hi" }] });
     assert.equal(calls, 2);
-    assert.equal(refreshCalls, 1);
+    assert.equal(refreshCalls, 3);
     assert.equal(result.content, "Hi");
 });
 

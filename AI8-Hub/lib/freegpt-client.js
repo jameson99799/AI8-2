@@ -131,7 +131,7 @@ class FreeGptClient {
     }
 
     async buildSecureHeaders() {
-        const challenge = await this._getChallenge();
+        const challenge = await this._getChallenge({ forceRefresh: true });
         const timestamp = Date.now().toString();
         const nonce = crypto.randomUUID();
 
