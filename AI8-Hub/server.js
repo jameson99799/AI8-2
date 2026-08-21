@@ -705,11 +705,11 @@ async function handleAi8DrawGeneration(req, res, body, config, client, drawModel
         isAborted: () => clientAborted,
     });
 
-    res.json({
-        created,
-        data: urls.map(url => ({ url })),
-        model: bareModel,
-    });
+    const imagePayload = await resolveImagesToBase64(
+        urls.map(url => ({ url })),
+        { timeoutMs: config.mediaFetchTimeoutMs }
+    );
+    res.json(buildImageGeneration({ created, images: imagePayload }));
 }
 
 async function handleAi8DrawEdit(req, res, body, drawImages, config, client, drawModel, bareModel, created) {
@@ -736,11 +736,11 @@ async function handleAi8DrawEdit(req, res, body, drawImages, config, client, dra
         isAborted: () => clientAborted,
     });
 
-    res.json({
-        created,
-        data: urls.map(url => ({ url })),
-        model: bareModel,
-    });
+    const imagePayload = await resolveImagesToBase64(
+        urls.map(url => ({ url })),
+        { timeoutMs: config.mediaFetchTimeoutMs }
+    );
+    res.json(buildImageGeneration({ created, images: imagePayload }));
 }
 
 async function handleAi8DrawChatCompletion(req, res, body, config, client, drawModel, bareModel) {
