@@ -9,6 +9,7 @@ const compression = require("compression");
 
 const packageJson = require("./package.json");
 const AI8Client = require("./lib/ai8-client");
+const { sizeToAspectRatio } = require("./lib/ai8-client");
 const { splitPreparedMessages } = require("./lib/message-layout");
 const RuntimeConfigStore = require("./lib/runtime-config");
 const RuntimeLogger = require("./lib/runtime-logger");
@@ -463,6 +464,12 @@ async function handleChatCompletion(req, res, body) {
         return proxyToCustomChannel(req, res, targetChannel, actualModel, body, buildErrorPayload, false, logger);
     }
 
+    const chatBareModel = String(actualModel || "").replace(/【AI8直连】$/, "").trim();
+    const chatDrawModel = client.getDrawModel(chatBareModel);
+    if (chatDrawModel) {
+        return handleAi8DrawChatCompletion(req, res, body, config, client, chatDrawModel, chatBareModel);
+    }
+
     const resolvedModel = await client.resolveModel(actualModel);
     const requestedTools = Array.isArray(body.tools) ? body.tools.filter(Boolean) : [];
     const toolSupported = resolvedModel?.attr?.capabilities?.tools === true;
@@ -608,23 +615,17 @@ async function handleChatCompletion(req, res, body) {
     }
 }
 
-async function handleAi8DrawGeneration(req, res, body, config, client, drawModel, bareModel, created) {
-    const prompt = String(body.prompt || "").trim();
-    if (!prompt) {
-        throw createHttpError(400, "prompt is required for image generation.");
-    }
-    const size = String(body.size || "1024x1024").trim() || "1024x1024";
-    const n = Math.min(Math.max(Number(body.n) || 1, 1), 4);
-    const qualityInput = String(body.quality || "high").toLowerCase();
-    const quality = ["high", "medium", "low", "auto"].includes(qualityInput) ? qualityInput : "high";
-
+function resolveDrawArea(drawModel, size) {
     const isOpenAI = drawModel.model === "openai-draw";
-    const area = isOpenAI
-        ? (/^\d+\s*[xX×]\s*\d+$/.test(size) ? size.toLowerCase().replace(/×/g, "x") : "auto")
-        : (sizeToAspectRatio(size) || "1:1");
+    if (isOpenAI) {
+        return /^\d+\s*[xX×]\s*\d+$/.test(size) ? size.toLowerCase().replace(/×/g, "x") : "auto";
+    }
+    return sizeToAspectRatio(size) || "1:1";
+}
 
-    let clientAborted = false;
-    req.on("close", () => { clientAborted = true; });
+async function runAi8DrawTask(client, { drawModel, bareModel, prompt, images = [], size, n, quality, isAborted }) {
+    const isOpenAI = drawModel.model === "openai-draw";
+    const area = resolveDrawArea(drawModel, size);
 
     let submitData;
     try {
@@ -632,6 +633,7 @@ async function handleAi8DrawGeneration(req, res, body, config, client, drawModel
             model: drawModel.model,
             version: drawModel.version,
             prompt,
+            images,
             area,
             outputMax: n,
             quality: isOpenAI ? quality : undefined,
@@ -646,13 +648,13 @@ async function handleAi8DrawGeneration(req, res, body, config, client, drawModel
         logger.warn("AI8 draw submission returned no task id", { response: JSON.stringify(submitData ?? null).slice(0, 200) });
         throw createHttpError(502, "AI8 draw submission returned no task id.");
     }
-    logger.info("AI8 draw task submitted", { taskId, model: bareModel, size, n });
+    logger.info("AI8 draw task submitted", { taskId, model: bareModel, size, n, images: images.length });
 
     const deadline = Date.now() + 300000;
     let status = null;
     while (Date.now() < deadline) {
         await new Promise(resolve => setTimeout(resolve, 3000));
-        if (clientAborted) {
+        if (typeof isAborted === "function" && isAborted()) {
             throw createHttpError(499, "Request aborted.");
         }
         status = await client.getDrawStatus(taskId).catch(error => {
@@ -677,12 +679,150 @@ async function handleAi8DrawGeneration(req, res, body, config, client, drawModel
     if (urls.length === 0) {
         throw createHttpError(502, "AI8 draw completed but returned no image url.");
     }
+    return urls.slice(0, n);
+}
+
+async function handleAi8DrawGeneration(req, res, body, config, client, drawModel, bareModel, created) {
+    const prompt = String(body.prompt || "").trim();
+    if (!prompt) {
+        throw createHttpError(400, "prompt is required for image generation.");
+    }
+    const size = String(body.size || "1024x1024").trim() || "1024x1024";
+    const n = Math.min(Math.max(Number(body.n) || 1, 1), 4);
+    const qualityInput = String(body.quality || "high").toLowerCase();
+    const quality = ["high", "medium", "low", "auto"].includes(qualityInput) ? qualityInput : "high";
+
+    let clientAborted = false;
+    req.on("close", () => { clientAborted = true; });
+
+    const urls = await runAi8DrawTask(client, {
+        drawModel,
+        bareModel,
+        prompt,
+        size,
+        n,
+        quality,
+        isAborted: () => clientAborted,
+    });
 
     res.json({
         created,
-        data: urls.slice(0, n).map(url => ({ url })),
+        data: urls.map(url => ({ url })),
         model: bareModel,
     });
+}
+
+async function handleAi8DrawEdit(req, res, body, drawImages, config, client, drawModel, bareModel, created) {
+    const prompt = String(body.prompt || "").trim();
+    if (!prompt) {
+        throw createHttpError(400, "prompt is required for image editing.");
+    }
+    const size = String(body.size || "1024x1024").trim() || "1024x1024";
+    const n = Math.min(Math.max(Number(body.n) || 1, 1), 4);
+    const qualityInput = String(body.quality || "high").toLowerCase();
+    const quality = ["high", "medium", "low", "auto"].includes(qualityInput) ? qualityInput : "high";
+
+    let clientAborted = false;
+    req.on("close", () => { clientAborted = true; });
+
+    const urls = await runAi8DrawTask(client, {
+        drawModel,
+        bareModel,
+        prompt,
+        images: drawImages.filter(Boolean).slice(0, 3),
+        size,
+        n,
+        quality,
+        isAborted: () => clientAborted,
+    });
+
+    res.json({
+        created,
+        data: urls.map(url => ({ url })),
+        model: bareModel,
+    });
+}
+
+async function handleAi8DrawChatCompletion(req, res, body, config, client, drawModel, bareModel) {
+    const created = Math.floor(Date.now() / 1000);
+
+    let prompt = "";
+    const inputImages = [];
+    for (const message of (Array.isArray(body.messages) ? body.messages : [])) {
+        if (!message || message.role !== "user") continue;
+        if (typeof message.content === "string") {
+            prompt = String(message.content || "").trim();
+            continue;
+        }
+        if (Array.isArray(message.content)) {
+            const textParts = [];
+            for (const part of message.content) {
+                if (part && part.type === "text" && part.text) {
+                    textParts.push(String(part.text));
+                } else if (part && (part.type === "image_url" || part.type === "input_image")) {
+                    try {
+                        const file = await contentPartToAi8File(part, { prefix: "draw-input" });
+                        inputImages.push(file.data);
+                    } catch (error) {
+                        logger.warn("Failed to normalize draw chat image input", { error: error.message });
+                    }
+                }
+            }
+            if (textParts.length > 0) {
+                prompt = textParts.join("\n").trim();
+            }
+        }
+    }
+
+    if (!prompt && inputImages.length === 0) {
+        throw createHttpError(400, "A text prompt or image input is required.");
+    }
+
+    let clientAborted = false;
+    req.on("close", () => { clientAborted = true; });
+
+    const urls = await runAi8DrawTask(client, {
+        drawModel,
+        bareModel,
+        prompt: prompt || "Edit this image.",
+        images: inputImages.slice(0, 3),
+        size: "1024x1024",
+        n: 1,
+        quality: "high",
+        isAborted: () => clientAborted,
+    });
+
+    const content = urls.map(url => `![generated image](${url})`).join("\n\n");
+    const completionId = randomId("chatcmpl");
+
+    if (body.stream) {
+        res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
+        res.flushHeaders();
+
+        const sendChunk = delta => {
+            res.write(`data: ${JSON.stringify(buildChatCompletionChunk({
+                id: completionId,
+                model: bareModel,
+                delta,
+            }))}\n\n`);
+        };
+
+        sendChunk({ role: "assistant" });
+        sendChunk({ content });
+        sendChunk({});
+        res.write("data: [DONE]\n\n");
+        res.end();
+        return;
+    }
+
+    res.json(buildChatCompletion({
+        id: completionId,
+        created,
+        model: bareModel,
+        content,
+    }));
 }
 
 app.post("/v1/images/generations", asyncHandler(async (req, res) => {
@@ -780,18 +920,21 @@ app.post("/v1/images/generations", asyncHandler(async (req, res) => {
 app.post("/v1/images/edits", asyncHandler(async (req, res) => {
     let body = req.body || {};
     let files = [];
+    let drawImages = [];
 
     if (req.headers["content-type"]?.includes("multipart/form-data")) {
         const parts = await simpleMultipartParser(req);
         body = parts.fields;
         
         if (parts.files.image) {
-            files.push(await normalizeAi8FileInput({
+            const normalized = await normalizeAi8FileInput({
                 data: parts.files.image.data.toString("base64"),
                 mimeType: parts.files.image.mimeType,
                 name: parts.files.image.filename,
                 prefix: "image"
-            }));
+            });
+            files.push(normalized);
+            drawImages.push(normalized.data);
         }
         if (parts.files.mask) {
             files.push(await normalizeAi8FileInput({
@@ -804,7 +947,9 @@ app.post("/v1/images/edits", asyncHandler(async (req, res) => {
     } else {
         // Handle JSON case
         if (body.image) {
-            files.push(await contentPartToAi8File({ type: "input_image", data: body.image }, { prefix: "image" }));
+            const normalized = await contentPartToAi8File({ type: "input_image", data: body.image }, { prefix: "image" });
+            files.push(normalized);
+            drawImages.push(normalized.data);
         }
         if (body.mask) {
             files.push(await contentPartToAi8File({ type: "input_image", data: body.mask }, { prefix: "mask" }));
@@ -828,6 +973,12 @@ app.post("/v1/images/edits", asyncHandler(async (req, res) => {
     
     if (targetChannel) {
         throw createHttpError(400, "Native image edit proxying for custom channels is not supported yet.");
+    }
+
+    const editsBareModel = String(actualModel || "").replace(/【AI8直连】$/, "").trim();
+    const editsDrawModel = client.getDrawModel(editsBareModel);
+    if (editsDrawModel) {
+        return handleAi8DrawEdit(req, res, body, drawImages, config, client, editsDrawModel, editsBareModel, created);
     }
 
     const resolvedModel = await client.resolveModel(actualModel);

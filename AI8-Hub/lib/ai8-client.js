@@ -169,6 +169,10 @@ class AI8Client {
             },
             prompt: String(options.prompt || ""),
         };
+        const images = Array.isArray(options.images) ? options.images.filter(Boolean) : [];
+        if (images.length > 0) {
+            payload.images = images;
+        }
         return this.requestJson("/draw", {
             method: "POST",
             body: payload,
