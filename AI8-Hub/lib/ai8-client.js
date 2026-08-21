@@ -1,5 +1,87 @@
 "use strict";
 
+const AI8_DRAW_MODELS = [
+    { model: "openai-draw", version: "gpt-image-2" },
+    { model: "openai-draw", version: "gpt-image-1-5" },
+    { model: "openai-draw", version: "gpt-image-1" },
+    { model: "openai-draw", version: "dall-e-3" },
+    { model: "google-draw", version: "nano-banana-pro" },
+    { model: "google-draw", version: "nano-banana-2" },
+    { model: "google-draw", version: "nano-banana-2-lite" },
+    { model: "google-draw", version: "nano-banana" },
+    { model: "xai-draw", version: "grok-imagine-image-quality" },
+    { model: "xai-draw", version: "grok-imagine-image" },
+    { model: "qwen-draw", version: "qwen-image-2.0-pro" },
+    { model: "qwen-draw", version: "qwen-image-2.0" },
+    { model: "wan-draw", version: "wan2.7-image-pro" },
+    { model: "wan-draw", version: "wan2.7-image" },
+    { model: "wan-draw", version: "wan2.6-t2i" },
+    { model: "kling-draw", version: "kling-omni-image" },
+    { model: "kling-draw", version: "kling-v3-omni" },
+    { model: "kling-draw", version: "kling-kolors-v3" },
+    { model: "kling-draw", version: "kling-kolors-v2-1" },
+    { model: "kling-draw", version: "kling-kolors-v2" },
+    { model: "minimax-draw", version: "image-01" },
+    { model: "minimax-draw", version: "image-01-live" },
+    { model: "volc-draw", version: "volc-img" },
+    { model: "volc-draw", version: "volc-v5-lite" },
+    { model: "volc-draw", version: "volc-v5-pro" },
+    { model: "volc-draw", version: "volc-v4-5" },
+    { model: "volc-draw", version: "volc-v4" },
+    { model: "mj", version: "mj" },
+    { model: "niji", version: "niji" },
+];
+
+function gcd(a, b) {
+    return b === 0 ? a : gcd(b, a % b);
+}
+
+function sizeToAspectRatio(size) {
+    const match = /^(\d+)\s*[xX×]\s*(\d+)$/.exec(String(size || "").trim());
+    if (!match) return null;
+    const width = Number(match[1]);
+    const height = Number(match[2]);
+    if (!width || !height) return null;
+    const divisor = gcd(width, height);
+    return `${width / divisor}:${height / divisor}`;
+}
+
+function resolveDrawModel(name) {
+    const normalized = String(name || "").trim().replace(/【AI8直连】$/, "").toLowerCase();
+    if (!normalized) return null;
+    return AI8_DRAW_MODELS.find(entry => entry.version === normalized) || null;
+}
+
+const DRAW_SCRAPER_TTL_MS = 30 * 60 * 1000;
+
+function parseDrawVersionsFromChunk(js) {
+    const versions = [];
+    const blockRe = /function\(e\)\{return\s+((?:e\.[A-Za-z0-9_]+=`[^`]*`,?\s*)+e?)\}\(\{\}\)/g;
+    let block;
+    while ((block = blockRe.exec(js))) {
+        const pairRe = /e\.[A-Za-z0-9_]+=`([^`]*)`/g;
+        let pair;
+        while ((pair = pairRe.exec(block[1]))) {
+            versions.push(pair[1]);
+        }
+    }
+    return versions;
+}
+
+function classifyDrawProvider(version) {
+    const value = String(version || "").trim();
+    if (!/^[a-z0-9][a-z0-9.\-]*$/.test(value)) return null;
+    if (/^(gpt-image|dall-e)/.test(value)) return "openai-draw";
+    if (/^nano-banana/.test(value)) return "google-draw";
+    if (/^grok-imagine/.test(value)) return "xai-draw";
+    if (/^qwen-image/.test(value)) return "qwen-draw";
+    if (/^wan\d/.test(value)) return "wan-draw";
+    if (/^kling-/.test(value)) return "kling-draw";
+    if (/^image-01/.test(value)) return "minimax-draw";
+    if (/^volc-/.test(value)) return value === "volc-text" ? null : "volc-draw";
+    return null;
+}
+
 class AI8Client {
     constructor(options = {}) {
         this.baseUrl = String(options.baseUrl || "https://ai8.rcouyi.com/api").replace(/\/+$/, "");
@@ -99,6 +181,78 @@ class AI8Client {
             throw this._buildError("AI8 draw task id is required.", 400);
         }
         return this.requestJson(`/draw/status/${encodeURIComponent(normalizedTaskId)}`);
+    }
+
+    async fetchDrawModels(forceRefresh = false) {
+        if (!forceRefresh && this._drawModelsCache && Date.now() - this._drawModelsCache.timestamp < DRAW_SCRAPER_TTL_MS) {
+            return this._drawModelsCache.models;
+        }
+
+        try {
+            const origin = new URL(this.baseUrl).origin;
+            const pageHtml = await this._scrapeText(`${origin}/draw`);
+            const appName = pageHtml.match(/assets\/(app-[\w.-]+\.js)/)?.[1];
+            if (!appName) {
+                throw new Error("app bundle not found on /draw page");
+            }
+            const appJs = await this._scrapeText(`${origin}/assets/${appName}`);
+            const chunkNames = [...new Set(
+                [...appJs.matchAll(/assets\/(draw-[\w.-]+\.js)/g)].map(match => match[1])
+            )];
+            if (chunkNames.length === 0) {
+                throw new Error("no draw chunks referenced in app bundle");
+            }
+
+            const versions = new Set(["mj", "niji"]);
+            for (const chunkName of chunkNames) {
+                const chunkJs = await this._scrapeText(`${origin}/assets/${chunkName}`);
+                for (const version of parseDrawVersionsFromChunk(chunkJs)) {
+                    versions.add(version);
+                }
+            }
+
+            const models = [];
+            for (const version of versions) {
+                const provider = classifyDrawProvider(version);
+                if (provider) {
+                    models.push({ model: provider, version });
+                }
+            }
+            for (const special of ["mj", "niji"]) {
+                if (!models.some(entry => entry.version === special)) {
+                    models.push({ model: special, version: special });
+                }
+            }
+            if (models.length < 5) {
+                throw new Error(`implausible draw model list (${models.length} entries)`);
+            }
+
+            this._drawModelsCache = { models, timestamp: Date.now() };
+            return models;
+        } catch (error) {
+            this._drawModelsCache = { models: AI8_DRAW_MODELS.map(entry => ({ ...entry })), timestamp: Date.now() };
+            return this._drawModelsCache.models;
+        }
+    }
+
+    getDrawModel(name) {
+        const normalized = String(name || "").trim().replace(/【AI8直连】$/, "").toLowerCase();
+        if (!normalized) return null;
+        const models = (this._drawModelsCache && Array.isArray(this._drawModelsCache.models))
+            ? this._drawModelsCache.models
+            : AI8_DRAW_MODELS;
+        return models.find(entry => entry.version === normalized) || null;
+    }
+
+    async _scrapeText(url) {
+        const response = await fetch(url, {
+            headers: { "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/132.0.0.0 Safari/537.36" },
+            signal: AbortSignal.timeout(15000),
+        });
+        if (!response.ok) {
+            throw new Error(`scrape ${url} failed with status ${response.status}`);
+        }
+        return response.text();
     }
 
     async resolveModel(model) {
@@ -636,3 +790,8 @@ class AI8Client {
 }
 
 module.exports = AI8Client;
+module.exports.AI8_DRAW_MODELS = AI8_DRAW_MODELS;
+module.exports.resolveDrawModel = resolveDrawModel;
+module.exports.sizeToAspectRatio = sizeToAspectRatio;
+module.exports.parseDrawVersionsFromChunk = parseDrawVersionsFromChunk;
+module.exports.classifyDrawProvider = classifyDrawProvider;

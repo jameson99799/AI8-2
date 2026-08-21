@@ -608,7 +608,7 @@ async function handleChatCompletion(req, res, body) {
     }
 }
 
-async function handleAi8DrawGeneration(req, res, body, config, client, bareModel, created) {
+async function handleAi8DrawGeneration(req, res, body, config, client, drawModel, bareModel, created) {
     const prompt = String(body.prompt || "").trim();
     if (!prompt) {
         throw createHttpError(400, "prompt is required for image generation.");
@@ -618,12 +618,24 @@ async function handleAi8DrawGeneration(req, res, body, config, client, bareModel
     const qualityInput = String(body.quality || "high").toLowerCase();
     const quality = ["high", "medium", "low", "auto"].includes(qualityInput) ? qualityInput : "high";
 
+    const isOpenAI = drawModel.model === "openai-draw";
+    const area = isOpenAI
+        ? (/^\d+\s*[xX×]\s*\d+$/.test(size) ? size.toLowerCase().replace(/×/g, "x") : "auto")
+        : (sizeToAspectRatio(size) || "1:1");
+
     let clientAborted = false;
     req.on("close", () => { clientAborted = true; });
 
     let submitData;
     try {
-        submitData = await client.submitDraw({ prompt, area: size, outputMax: n, quality });
+        submitData = await client.submitDraw({
+            model: drawModel.model,
+            version: drawModel.version,
+            prompt,
+            area,
+            outputMax: n,
+            quality: isOpenAI ? quality : undefined,
+        });
     } catch (error) {
         logger.warn("AI8 draw submission failed", { model: bareModel, error: error.message });
         throw error;
@@ -695,8 +707,9 @@ app.post("/v1/images/generations", asyncHandler(async (req, res) => {
     }
 
     const bareModel = String(actualModel || "").replace(/【AI8直连】$/, "").trim();
-    if (/^(gpt-image|openai-draw)/i.test(bareModel)) {
-        return handleAi8DrawGeneration(req, res, body, config, client, bareModel, created);
+    const drawModel = client.getDrawModel(bareModel);
+    if (targetChannel === null && drawModel) {
+        return handleAi8DrawGeneration(req, res, body, config, client, drawModel, bareModel, created);
     }
 
     const resolvedModel = await client.resolveModel(actualModel);

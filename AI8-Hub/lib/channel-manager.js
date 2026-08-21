@@ -2,6 +2,7 @@
 
 const GptAllClient = require("./gptall-client");
 const FreeGptClient = require("./freegpt-client");
+const { AI8_DRAW_MODELS } = require("./ai8-client");
 
 function buildGptAllClient(config) {
     if (!config || !config.gptallAuthToken) {
@@ -59,6 +60,18 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
                     return [];
                 })
         );
+        if (typeof client.fetchDrawModels === "function") {
+            fetchTasks.push(
+                client.fetchDrawModels(forceRefresh)
+                    .then(drawModels => (Array.isArray(drawModels) && drawModels.length > 0 ? drawModels : AI8_DRAW_MODELS))
+                    .catch(e => {
+                        if (logger) logger.warn("Failed to scrape AI8 draw models", { error: String(e) });
+                        return AI8_DRAW_MODELS;
+                    })
+            );
+        } else {
+            fetchTasks.push(Promise.resolve(AI8_DRAW_MODELS));
+        }
     }
 
     if (config.gptallEnabled !== false && config.gptallAuthToken) {
@@ -118,6 +131,7 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
 
     let offset = 0;
     const ai8Models = ai8Requested ? results[offset++] || [] : [];
+    const ai8DrawModels = ai8Requested ? results[offset++] || [] : [];
     let gptallModels = gptallRequested ? results[offset++] || [] : [];
     let freegptModels = freegptRequested ? results[offset++] || [] : [];
     const customResults = results.slice(offset);
@@ -150,6 +164,22 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
             attr: { providerName: "ai8", capabilities: { image: true } },
             _source: "ai8",
         });
+    }
+
+    if (ai8Requested) {
+        for (const drawModel of ai8DrawModels) {
+            if (!drawModel || !drawModel.version) continue;
+            if (allModels.some(m => m._source === "ai8" && m.origId === drawModel.version)) continue;
+            const modelId = `${drawModel.version}【AI8直连】`;
+            allModels.push({
+                label: modelId,
+                value: modelId,
+                origId: drawModel.version,
+                attr: { providerName: "ai8", capabilities: { image: true } },
+                _source: "ai8",
+                _isDraw: true,
+            });
+        }
     }
 
     for (const gptallModel of (gptallModels || [])) {
