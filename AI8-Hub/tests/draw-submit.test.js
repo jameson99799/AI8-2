@@ -122,6 +122,17 @@ test("submitDraw builds google-draw args matching official client", async () => 
     });
 });
 
+test("buildDrawArgs forces 1K resolution for nano-banana lite versions", () => {
+    const { buildDrawArgs } = require("../lib/ai8-client");
+
+    const lite = buildDrawArgs({ model: "google-draw", version: "nano-banana-2-lite", size: "auto", images: [] });
+    assert.equal(lite.resolution, "1K");
+    assert.equal(lite.area, "auto");
+
+    const pro = buildDrawArgs({ model: "google-draw", version: "nano-banana-2", size: "auto", images: [] });
+    assert.equal(pro.resolution, "2K");
+});
+
 test("buildDrawArgs maps refImg for qwen/volc/wan/minimax/kling", () => {
     const { buildDrawArgs } = require("../lib/ai8-client");
     const images = [{ base64: "data:x", name: "a.png", size: 1 }];

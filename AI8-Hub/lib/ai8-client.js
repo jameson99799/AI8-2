@@ -178,7 +178,7 @@ function buildDrawArgs({ model, version, size, outputMax, quality, images }) {
             break;
         }
         case "google-draw": {
-            args.resolution = "2K";
+            args.resolution = /lite/i.test(version) ? "1K" : "2K";
             args.area = "auto";
             if (hasImages) args.images = images;
             break;
