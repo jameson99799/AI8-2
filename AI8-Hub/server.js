@@ -332,7 +332,7 @@ app.post("/v1/messages", asyncHandler(async (req, res) => {
     }
 
     if (targetChannel && targetChannel.protocol === "claude") {
-        return proxyToCustomChannel(req, res, targetChannel, resolved.actualModel, body, buildErrorPayload, true);
+        return proxyToCustomChannel(req, res, targetChannel, resolved.actualModel, body, buildErrorPayload, true, logger);
     }
 
     // Anthropic to OpenAI forwarder. The transformed request is handed
@@ -460,7 +460,7 @@ async function handleChatCompletion(req, res, body) {
     }
 
     if (targetChannel) {
-        return proxyToCustomChannel(req, res, targetChannel, actualModel, body, buildErrorPayload);
+        return proxyToCustomChannel(req, res, targetChannel, actualModel, body, buildErrorPayload, false, logger);
     }
 
     const resolvedModel = await client.resolveModel(actualModel);
@@ -1157,12 +1157,18 @@ async function handleFreeGptChatCompletion(req, res, model, body, config) {
                 res.end();
                 return;
             }
+            logger.warn("freegpt stream failed", {
+                model: actualModel,
+                status: error.status,
+                error: error.message,
+            });
             res.write(buildSseErrorEvent(error, requestModel));
             res.end();
             return;
         }
 
         if (!streamedContent) {
+            logger.warn("freegpt returned an empty response", { model: actualModel });
             res.write(buildSseErrorEvent(new Error("freegpt returned an empty response."), requestModel));
             res.end();
             return;
@@ -1215,11 +1221,17 @@ async function handleFreeGptChatCompletion(req, res, model, body, config) {
         if (abortController.signal.aborted) {
             throw createHttpError(499, "Request aborted.");
         }
+        logger.warn("freegpt request failed", {
+            model: actualModel,
+            status: error.status,
+            error: error.message,
+        });
         throw error;
     }
 
     const finalContent = String(streamResult?.content || "").trim();
     if (!finalContent) {
+        logger.warn("freegpt returned an empty response", { model: actualModel });
         throw createHttpError(502, "freegpt returned an empty response.");
     }
     const images = extractAi8Images(finalContent);

@@ -337,7 +337,7 @@ function lookupGptAllToolSupport(actualModel, requestModel) {
     return cached._isToolSupported === true;
 }
 
-async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, buildErrorPayload, isNativeClaude = false) {
+async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, buildErrorPayload, isNativeClaude = false, logger = null) {
     let safeBase = targetChannel.baseUrl.trim().replace(/\/+$/, "");
     
     if (isNativeClaude) {
@@ -380,6 +380,14 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
 
         if (!upstreamRes.ok) {
             const errText = await upstreamRes.text();
+            if (logger) {
+                logger.warn("Custom channel upstream error", {
+                    channel: targetChannel.name || targetChannel.id || "unknown",
+                    model: actualModel,
+                    status: upstreamRes.status,
+                    body: String(errText).slice(0, 400),
+                });
+            }
             res.status(upstreamRes.status).send(errText);
             return;
         }
@@ -403,6 +411,15 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
                         res.write(Buffer.from(value));
                     }
                 }
+            } catch (streamErr) {
+                if (logger) {
+                    logger.warn("Custom channel stream interrupted", {
+                        channel: targetChannel.name || targetChannel.id || "unknown",
+                        model: actualModel,
+                        error: streamErr.message,
+                    });
+                }
+                throw streamErr;
             } finally {
                 reader.releaseLock();
             }
@@ -420,9 +437,16 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
             }
         }
     } catch (e) {
+        if (logger && !abortController.signal.aborted) {
+            logger.error("Custom channel proxy failed", {
+                channel: targetChannel.name || targetChannel.id || "unknown",
+                model: actualModel,
+                error: e.message,
+            });
+        }
         if (abortController.signal.aborted) return res.end();
         if (!res.headersSent) {
-            const errJson = typeof buildErrorPayload === "function" 
+            const errJson = typeof buildErrorPayload === "function"
                 ? buildErrorPayload(502, `Error proxying to channel: ${e.message}`, "server_error")
                 : { error: { message: e.message }};
             res.status(502).json(errJson);
