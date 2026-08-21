@@ -426,6 +426,16 @@ async function handleChatCompletion(req, res, body) {
     const config = getConfig();
     const client = getClient();
 
+    if (Array.isArray(body.messages)) {
+        body.messages = body.messages.map(message => {
+            if (message && typeof message === "object" && "reasoning_content" in message) {
+                const { reasoning_content, ...rest } = message;
+                return rest;
+            }
+            return message;
+        });
+    }
+
     if (body.n && Number(body.n) !== 1) {
         throw createHttpError(400, "AI8 adapter currently supports only n=1.");
     }
