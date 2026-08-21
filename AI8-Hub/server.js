@@ -741,6 +741,25 @@ async function handleAi8DrawEdit(req, res, body, drawImages, config, client, dra
     res.json(buildImageGeneration({ created, images: imagePayload }));
 }
 
+async function collectDrawChatImagesFromText(text, inputImages) {
+    const value = String(text || "");
+    const dataUrls = value.match(/data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+/gi) || [];
+    for (const dataUrl of dataUrls) {
+        if (inputImages.length >= 3) return;
+        inputImages.push(dataUrl);
+    }
+    const markdownUrls = [...value.matchAll(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/g)].map(match => match[1]);
+    for (const url of markdownUrls) {
+        if (inputImages.length >= 3) return;
+        try {
+            const file = await normalizeAi8FileInput({ url, prefix: "draw-input" });
+            inputImages.push(file.data);
+        } catch (error) {
+            logger.warn("Failed to fetch draw chat markdown image", { url: url.slice(0, 120), error: error.message });
+        }
+    }
+}
+
 async function handleAi8DrawChatCompletion(req, res, body, config, client, drawModel, bareModel) {
     const created = Math.floor(Date.now() / 1000);
 
@@ -750,27 +769,51 @@ async function handleAi8DrawChatCompletion(req, res, body, config, client, drawM
         if (!message || message.role !== "user") continue;
         if (typeof message.content === "string") {
             prompt = String(message.content || "").trim();
+            await collectDrawChatImagesFromText(prompt, inputImages);
             continue;
         }
         if (Array.isArray(message.content)) {
             const textParts = [];
             for (const part of message.content) {
-                if (part && part.type === "text" && part.text) {
+                if (!part) continue;
+                if (part.type === "text" && part.text) {
                     textParts.push(String(part.text));
-                } else if (part && (part.type === "image_url" || part.type === "input_image")) {
+                } else if (["image_url", "input_image", "image"].includes(part.type)) {
                     try {
                         const file = await contentPartToAi8File(part, { prefix: "draw-input" });
                         inputImages.push(file.data);
                     } catch (error) {
-                        logger.warn("Failed to normalize draw chat image input", { error: error.message });
+                        logger.warn("Failed to normalize draw chat image input", { type: part.type, error: error.message });
+                    }
+                } else if (part.type === "file") {
+                    const fileData = part.file?.file_data || part.file_data || "";
+                    if (typeof fileData === "string" && /^data:image\//i.test(fileData)) {
+                        inputImages.push(fileData);
+                    } else {
+                        logger.warn("Unsupported draw chat file part", { filename: part.file?.filename || null });
                     }
                 }
             }
             if (textParts.length > 0) {
                 prompt = textParts.join("\n").trim();
+                await collectDrawChatImagesFromText(prompt, inputImages);
             }
         }
     }
+
+    if (inputImages.length === 0) {
+        const partTypes = [];
+        for (const message of (Array.isArray(body.messages) ? body.messages : [])) {
+            if (Array.isArray(message?.content)) {
+                partTypes.push(...message.content.map(part => part?.type || typeof part));
+            } else if (message?.content) {
+                partTypes.push("string");
+            }
+        }
+        logger.info("AI8 draw chat received without reference images", { model: bareModel, partTypes });
+    }
+
+    logger.info("AI8 draw chat prepared", { model: bareModel, imageCount: inputImages.length, promptLength: prompt.length });
 
     if (!prompt && inputImages.length === 0) {
         throw createHttpError(400, "A text prompt or image input is required.");
