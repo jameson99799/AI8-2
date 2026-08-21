@@ -615,18 +615,7 @@ async function handleChatCompletion(req, res, body) {
     }
 }
 
-function resolveDrawArea(drawModel, size) {
-    const isOpenAI = drawModel.model === "openai-draw";
-    if (isOpenAI) {
-        return /^\d+\s*[xX×]\s*\d+$/.test(size) ? size.toLowerCase().replace(/×/g, "x") : "auto";
-    }
-    return sizeToAspectRatio(size) || "1:1";
-}
-
 async function runAi8DrawTask(client, { drawModel, bareModel, prompt, images = [], size, n, quality, isAborted }) {
-    const isOpenAI = drawModel.model === "openai-draw";
-    const area = resolveDrawArea(drawModel, size);
-
     let submitData;
     try {
         submitData = await client.submitDraw({
@@ -634,9 +623,9 @@ async function runAi8DrawTask(client, { drawModel, bareModel, prompt, images = [
             version: drawModel.version,
             prompt,
             images,
-            area,
+            size,
             outputMax: n,
-            quality: isOpenAI ? quality : undefined,
+            quality,
         });
     } catch (error) {
         logger.warn("AI8 draw submission failed", { model: bareModel, error: error.message });

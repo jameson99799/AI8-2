@@ -63,6 +63,8 @@ test("submitDraw normalizes string images into base64 objects", async () => {
     assert.deepEqual(body.args.images, [{ base64: "data:image/png;base64,AAAA", name: "image-1.png", size: 3 }]);
     assert.equal(body.action, "IMAGINE");
     assert.equal(body.args.version, "gpt-image-2");
+    assert.equal(body.args.area, "auto");
+    assert.equal(body.args.quality, "high");
 });
 
 test("submitDraw omits images field when none provided", async () => {
@@ -85,4 +87,65 @@ test("submitDraw omits images field when none provided", async () => {
 
     const body = JSON.parse(captured.options.body);
     assert.equal(body.args.images, undefined);
+});
+
+test("submitDraw builds google-draw args matching official client", async () => {
+    const client = new AI8Client({ authToken: "token-1" });
+    let captured = null;
+    const originalFetch = global.fetch;
+    global.fetch = async (url, options = {}) => {
+        captured = { url, options };
+        return {
+            ok: true,
+            json: async () => ({ code: 0, data: { taskId: "t-3" }, msg: "" }),
+        };
+    };
+
+    try {
+        await client.submitDraw({
+            model: "google-draw",
+            version: "nano-banana-pro",
+            prompt: "edit",
+            images: ["data:image/png;base64,AAAA"],
+        });
+    } finally {
+        global.fetch = originalFetch;
+    }
+
+    const body = JSON.parse(captured.options.body);
+    assert.equal(body.model, "google-draw");
+    assert.deepEqual(body.args, {
+        version: "nano-banana-pro",
+        resolution: "2K",
+        area: "auto",
+        images: [{ base64: "data:image/png;base64,AAAA", name: "image-1.png", size: 3 }],
+    });
+});
+
+test("buildDrawArgs maps refImg for qwen/volc/wan/minimax/kling", () => {
+    const { buildDrawArgs } = require("../lib/ai8-client");
+    const images = [{ base64: "data:x", name: "a.png", size: 1 }];
+
+    const qwen = buildDrawArgs({ model: "qwen-draw", version: "qwen-image-2.0-pro", size: "1024x1024", outputMax: 1, quality: "high", images });
+    assert.deepEqual(qwen.refImg, images);
+    assert.equal(qwen.area, "2048*2048");
+    assert.equal(qwen.prompt_extend, true);
+
+    const volc = buildDrawArgs({ model: "volc-draw", version: "volc-v5-pro", size: "1024x1024", outputMax: 1, quality: "high", images });
+    assert.deepEqual(volc.refImg, images);
+    assert.equal(volc.resolution, "2K");
+    assert.equal(volc.output_format, "jpeg");
+
+    const minimax = buildDrawArgs({ model: "minimax-draw", version: "image-01", size: "1536x864", outputMax: 1, quality: "high", images });
+    assert.deepEqual(minimax.refImg, images);
+    assert.equal(minimax.aspect_ratio, "16:9");
+
+    const kling = buildDrawArgs({ model: "kling-draw", version: "kling-kolors-v3", size: "1024x1024", outputMax: 1, quality: "high", images });
+    assert.deepEqual(kling.refImg, images);
+    assert.equal(kling.aspect_ratio, "1:1");
+
+    const wan = buildDrawArgs({ model: "wan-draw", version: "wan2.7-image-pro", size: "1024x1024", outputMax: 1, quality: "high", images });
+    assert.deepEqual(wan.refImg, images);
+    assert.equal(wan.area, "1280*1280");
+    assert.equal(wan.thinking_mode, true);
 });

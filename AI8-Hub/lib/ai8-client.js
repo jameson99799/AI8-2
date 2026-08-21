@@ -142,6 +142,108 @@ function parseDrawImageEntry(dataUrl, index) {
     return entry;
 }
 
+function clampInt(value, min, max, fallback) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return fallback;
+    return Math.min(Math.max(Math.round(num), min), max);
+}
+
+function normalizeOpenAiArea(size) {
+    const text = String(size || "").trim();
+    if (/^\d+\s*[xX×]\s*\d+$/.test(text)) {
+        return text.toLowerCase().replace(/×/g, "x");
+    }
+    return "auto";
+}
+
+function buildDrawArgs({ model, version, size, outputMax, quality, images }) {
+    const args = { version };
+    const hasImages = images.length > 0;
+    const ratio = sizeToAspectRatio(size);
+
+    switch (model) {
+        case "openai-draw": {
+            if (version === "dall-e-3") {
+                args.area = normalizeOpenAiArea(size) === "auto" ? "1024x1024" : normalizeOpenAiArea(size);
+                args.quality = quality === "hd" ? "hd" : "standard";
+                args.style = "vivid";
+            } else {
+                args.area = normalizeOpenAiArea(size);
+                args.output_max = clampInt(outputMax, 1, 10, 1);
+                if (hasImages) args.images = images;
+                args.quality = ["high", "medium", "low"].includes(quality) ? quality : "high";
+                args.moderation = "auto";
+                args.background = "auto";
+            }
+            break;
+        }
+        case "google-draw": {
+            args.resolution = "2K";
+            args.area = "auto";
+            if (hasImages) args.images = images;
+            break;
+        }
+        case "xai-draw": {
+            args.area = ratio || "auto";
+            args.resolution = "1k";
+            args.output_max = clampInt(outputMax, 1, 10, 1);
+            if (hasImages) args.images = images.slice(0, 3);
+            break;
+        }
+        case "qwen-draw": {
+            if (hasImages) args.refImg = images.slice(0, 3);
+            const isPro = /2\.0/.test(version);
+            args.area = isPro ? "2048*2048" : "1024*1024";
+            if (isPro) args.n = clampInt(outputMax, 1, 6, 1);
+            args.prompt_extend = true;
+            break;
+        }
+        case "wan-draw": {
+            if (hasImages) args.refImg = images.slice(0, 9);
+            args.area = "1280*1280";
+            args.n = clampInt(outputMax, 1, 4, 1);
+            args.prompt_extend = true;
+            args.thinking_mode = true;
+            break;
+        }
+        case "volc-draw": {
+            if (hasImages) args.refImg = images.slice(0, 6);
+            args.resolution = "2K";
+            args.area = "auto";
+            args.output_max = clampInt(outputMax, 1, 15, 1);
+            args.output_format = "jpeg";
+            break;
+        }
+        case "minimax-draw": {
+            args.aspect_ratio = ratio || "1:1";
+            if (hasImages) args.refImg = images.slice(0, 1);
+            args.n = clampInt(outputMax, 1, 9, 1);
+            args.prompt_optimizer = true;
+            break;
+        }
+        case "kling-draw": {
+            args.aspect_ratio = ratio || "1:1";
+            if (hasImages) args.refImg = images.slice(0, /omni/i.test(version) ? 10 : 1);
+            if (/omni/i.test(version)) args.resolution = "1k";
+            args.n = clampInt(outputMax, 1, 9, 1);
+            break;
+        }
+        case "mj":
+        case "niji": {
+            args.area = ratio || "1:1";
+            args.version = "7";
+            break;
+        }
+        default: {
+            args.area = normalizeOpenAiArea(size);
+            args.output_max = clampInt(outputMax, 1, 10, 1);
+            if (hasImages) args.images = images;
+        }
+    }
+
+    return args;
+}
+
 class AI8Client {
     constructor(options = {}) {
         this.baseUrl = String(options.baseUrl || "https://ai8.rcouyi.com/api").replace(/\/+$/, "");
@@ -212,29 +314,33 @@ class AI8Client {
     }
 
     async submitDraw(options = {}) {
+        const model = String(options.model || "openai-draw").trim() || "openai-draw";
+        const version = String(options.version || "gpt-image-2").trim() || "gpt-image-2";
+        const rawImages = Array.isArray(options.images) ? options.images.filter(Boolean) : [];
+        const images = rawImages
+            .map((image, index) => (typeof image === "string" ? parseDrawImageEntry(image, index) : image))
+            .filter(Boolean);
+
         const payload = {
-            model: String(options.model || "openai-draw").trim() || "openai-draw",
+            model,
             action: String(options.action || "IMAGINE").trim() || "IMAGINE",
             public: false,
             fast: options.fast === true,
-            args: {
-                version: String(options.version || "gpt-image-2").trim() || "gpt-image-2",
-                area: String(options.area || "1024x1024").trim() || "1024x1024",
-                output_max: Number.isFinite(Number(options.outputMax)) && Number(options.outputMax) > 0
-                    ? Number(options.outputMax)
-                    : 1,
-                quality: String(options.quality || "high").trim() || "high",
-                moderation: "auto",
-                background: "auto",
-            },
+            args: buildDrawArgs({
+                model,
+                version,
+                size: options.size,
+                outputMax: options.outputMax,
+                quality: options.quality,
+                images,
+            }),
             prompt: String(options.prompt || ""),
         };
-        const images = Array.isArray(options.images) ? options.images.filter(Boolean) : [];
-        if (images.length > 0) {
-            payload.args.images = images
-                .map((image, index) => (typeof image === "string" ? parseDrawImageEntry(image, index) : image))
-                .filter(Boolean);
+
+        if ((model === "mj" || model === "niji") && images.length > 0) {
+            payload.images = images;
         }
+
         return this.requestJson("/draw", {
             method: "POST",
             body: payload,
@@ -863,3 +969,4 @@ module.exports.parseDrawVersionsFromChunk = parseDrawVersionsFromChunk;
 module.exports.classifyDrawProvider = classifyDrawProvider;
 module.exports.parseDrawImageEntry = parseDrawImageEntry;
 module.exports.getImageDimensions = getImageDimensions;
+module.exports.buildDrawArgs = buildDrawArgs;
