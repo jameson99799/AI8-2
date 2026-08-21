@@ -69,6 +69,38 @@ class AI8Client {
         });
     }
 
+    async submitDraw(options = {}) {
+        const payload = {
+            model: String(options.model || "openai-draw").trim() || "openai-draw",
+            action: String(options.action || "IMAGINE").trim() || "IMAGINE",
+            public: false,
+            fast: options.fast === true,
+            args: {
+                version: String(options.version || "gpt-image-2").trim() || "gpt-image-2",
+                area: String(options.area || "1024x1024").trim() || "1024x1024",
+                output_max: Number.isFinite(Number(options.outputMax)) && Number(options.outputMax) > 0
+                    ? Number(options.outputMax)
+                    : 1,
+                quality: String(options.quality || "high").trim() || "high",
+                moderation: "auto",
+                background: "auto",
+            },
+            prompt: String(options.prompt || ""),
+        };
+        return this.requestJson("/draw", {
+            method: "POST",
+            body: payload,
+        });
+    }
+
+    async getDrawStatus(taskId) {
+        const normalizedTaskId = String(taskId || "").trim();
+        if (!normalizedTaskId) {
+            throw this._buildError("AI8 draw task id is required.", 400);
+        }
+        return this.requestJson(`/draw/status/${encodeURIComponent(normalizedTaskId)}`);
+    }
+
     async resolveModel(model) {
         const requested = String(model || this.defaultModel || "").trim();
         if (!requested) {

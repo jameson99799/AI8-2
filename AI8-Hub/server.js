@@ -608,6 +608,71 @@ async function handleChatCompletion(req, res, body) {
     }
 }
 
+async function handleAi8DrawGeneration(req, res, body, config, client, bareModel, created) {
+    const prompt = String(body.prompt || "").trim();
+    if (!prompt) {
+        throw createHttpError(400, "prompt is required for image generation.");
+    }
+    const size = String(body.size || "1024x1024").trim() || "1024x1024";
+    const n = Math.min(Math.max(Number(body.n) || 1, 1), 4);
+    const qualityInput = String(body.quality || "high").toLowerCase();
+    const quality = ["high", "medium", "low", "auto"].includes(qualityInput) ? qualityInput : "high";
+
+    let clientAborted = false;
+    req.on("close", () => { clientAborted = true; });
+
+    let submitData;
+    try {
+        submitData = await client.submitDraw({ prompt, area: size, outputMax: n, quality });
+    } catch (error) {
+        logger.warn("AI8 draw submission failed", { model: bareModel, error: error.message });
+        throw error;
+    }
+
+    const taskId = submitData?.taskId || submitData?.id || submitData?.task_id;
+    if (!taskId) {
+        logger.warn("AI8 draw submission returned no task id", { response: JSON.stringify(submitData ?? null).slice(0, 200) });
+        throw createHttpError(502, "AI8 draw submission returned no task id.");
+    }
+    logger.info("AI8 draw task submitted", { taskId, model: bareModel, size, n });
+
+    const deadline = Date.now() + 300000;
+    let status = null;
+    while (Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        if (clientAborted) {
+            throw createHttpError(499, "Request aborted.");
+        }
+        status = await client.getDrawStatus(taskId).catch(error => {
+            logger.warn("AI8 draw status poll failed", { taskId, error: error.message });
+            return null;
+        });
+        if (status && (status.end === true || status.fail === true)) break;
+    }
+
+    if (!status || (status.end !== true && status.fail !== true)) {
+        logger.warn("AI8 draw task timed out", { taskId });
+        throw createHttpError(504, `AI8 draw task ${taskId} timed out.`);
+    }
+    if (status.fail === true) {
+        logger.warn("AI8 draw task failed", { taskId, error: status.error });
+        throw createHttpError(502, `AI8 draw failed: ${String(status.error || "unknown error").slice(0, 200)}`);
+    }
+
+    const urls = [status.imgUrl, status.smallImgUrl]
+        .filter(Boolean)
+        .filter((url, index, arr) => arr.indexOf(url) === index);
+    if (urls.length === 0) {
+        throw createHttpError(502, "AI8 draw completed but returned no image url.");
+    }
+
+    res.json({
+        created,
+        data: urls.slice(0, n).map(url => ({ url })),
+        model: bareModel,
+    });
+}
+
 app.post("/v1/images/generations", asyncHandler(async (req, res) => {
     const body = req.body || {};
     const config = getConfig();
@@ -628,7 +693,12 @@ app.post("/v1/images/generations", asyncHandler(async (req, res) => {
     if (targetChannel) {
         throw createHttpError(400, "Native image generation proxying for custom channels is not supported yet.");
     }
-    
+
+    const bareModel = String(actualModel || "").replace(/【AI8直连】$/, "").trim();
+    if (/^(gpt-image|openai-draw)/i.test(bareModel)) {
+        return handleAi8DrawGeneration(req, res, body, config, client, bareModel, created);
+    }
+
     const resolvedModel = await client.resolveModel(actualModel);
     
     // Construct a single message for image generation

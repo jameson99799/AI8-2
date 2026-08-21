@@ -142,6 +142,16 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
         });
     }
 
+    if (ai8Requested && !allModels.some(m => m._source === "ai8" && m.origId === "gpt-image-2")) {
+        allModels.push({
+            label: "gpt-image-2【AI8直连】",
+            value: "gpt-image-2【AI8直连】",
+            origId: "gpt-image-2",
+            attr: { providerName: "ai8", capabilities: { image: true } },
+            _source: "ai8",
+        });
+    }
+
     for (const gptallModel of (gptallModels || [])) {
         const origId = String(gptallModel.value || gptallModel.model || "").trim();
         if (origId && !allModels.some(m => m._source === "gptall" && m.origId === origId)) {
