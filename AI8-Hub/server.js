@@ -715,11 +715,19 @@ async function handleAi8DrawEdit(req, res, body, drawImages, config, client, dra
     let clientAborted = false;
     req.on("close", () => { clientAborted = true; });
 
+    const editImages = drawImages.filter(Boolean).slice(0, 3);
+    logger.info("AI8 draw edit received", {
+        model: bareModel,
+        imageCount: editImages.length,
+        imageBytes: editImages.map(data => Buffer.byteLength(String(data), "utf8")),
+        promptLength: prompt.length,
+    });
+
     const urls = await runAi8DrawTask(client, {
         drawModel,
         bareModel,
         prompt,
-        images: drawImages.filter(Boolean).slice(0, 3),
+        images: editImages,
         size,
         n,
         quality,
@@ -915,24 +923,19 @@ app.post("/v1/images/edits", asyncHandler(async (req, res) => {
     if (req.headers["content-type"]?.includes("multipart/form-data")) {
         const parts = await simpleMultipartParser(req);
         body = parts.fields;
-        
-        if (parts.files.image) {
+
+        for (const [fieldName, filePart] of Object.entries(parts.files)) {
+            if (!filePart) continue;
             const normalized = await normalizeAi8FileInput({
-                data: parts.files.image.data.toString("base64"),
-                mimeType: parts.files.image.mimeType,
-                name: parts.files.image.filename,
-                prefix: "image"
+                data: filePart.data.toString("base64"),
+                mimeType: filePart.mimeType,
+                name: filePart.filename,
+                prefix: fieldName
             });
             files.push(normalized);
-            drawImages.push(normalized.data);
-        }
-        if (parts.files.mask) {
-            files.push(await normalizeAi8FileInput({
-                data: parts.files.mask.data.toString("base64"),
-                mimeType: parts.files.mask.mimeType,
-                name: parts.files.mask.filename,
-                prefix: "mask"
-            }));
+            if (!/^mask(\[\])?$/i.test(fieldName)) {
+                drawImages.push(normalized.data);
+            }
         }
     } else {
         // Handle JSON case
