@@ -171,7 +171,12 @@ class AI8Client {
         };
         const images = Array.isArray(options.images) ? options.images.filter(Boolean) : [];
         if (images.length > 0) {
-            payload.images = images;
+            payload.images = images.map((image, index) => {
+                if (typeof image === "string") {
+                    return { base64: image, name: `image-${index + 1}.png` };
+                }
+                return image;
+            });
         }
         return this.requestJson("/draw", {
             method: "POST",
