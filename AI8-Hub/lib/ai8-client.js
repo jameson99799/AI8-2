@@ -82,6 +82,66 @@ function classifyDrawProvider(version) {
     return null;
 }
 
+const MIME_EXTENSION_MAP = {
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/gif": "gif",
+    "image/webp": "webp",
+};
+
+function getImageDimensions(buffer) {
+    if (!Buffer.isBuffer(buffer) || buffer.length < 24) return null;
+
+    if (buffer.toString("ascii", 1, 4) === "PNG") {
+        return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+    }
+
+    if (buffer[0] === 0xff && buffer[1] === 0xd8) {
+        let offset = 2;
+        while (offset + 9 < buffer.length) {
+            if (buffer[offset] !== 0xff) {
+                offset += 1;
+                continue;
+            }
+            const marker = buffer[offset + 1];
+            if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+                return { height: buffer.readUInt16BE(offset + 5), width: buffer.readUInt16BE(offset + 7) };
+            }
+            if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+                offset += 2;
+            } else {
+                offset += 2 + buffer.readUInt16BE(offset + 2);
+            }
+        }
+        return null;
+    }
+
+    if (buffer.toString("ascii", 0, 3) === "GIF") {
+        return { width: buffer.readUInt16LE(6), height: buffer.readUInt16LE(8) };
+    }
+
+    return null;
+}
+
+function parseDrawImageEntry(dataUrl, index) {
+    const match = /^data:([^;,]+);base64,([\s\S]*)$/.exec(String(dataUrl));
+    if (!match) return null;
+    const mimeType = match[1].toLowerCase();
+    const buffer = Buffer.from(match[2], "base64");
+    const entry = {
+        base64: dataUrl,
+        name: `image-${index + 1}.${MIME_EXTENSION_MAP[mimeType] || "png"}`,
+        size: buffer.length,
+    };
+    const dimensions = getImageDimensions(buffer);
+    if (dimensions) {
+        entry.width = dimensions.width;
+        entry.height = dimensions.height;
+    }
+    return entry;
+}
+
 class AI8Client {
     constructor(options = {}) {
         this.baseUrl = String(options.baseUrl || "https://ai8.rcouyi.com/api").replace(/\/+$/, "");
@@ -171,12 +231,9 @@ class AI8Client {
         };
         const images = Array.isArray(options.images) ? options.images.filter(Boolean) : [];
         if (images.length > 0) {
-            payload.images = images.map((image, index) => {
-                if (typeof image === "string") {
-                    return { base64: image, name: `image-${index + 1}.png` };
-                }
-                return image;
-            });
+            payload.args.images = images
+                .map((image, index) => (typeof image === "string" ? parseDrawImageEntry(image, index) : image))
+                .filter(Boolean);
         }
         return this.requestJson("/draw", {
             method: "POST",
@@ -804,3 +861,5 @@ module.exports.resolveDrawModel = resolveDrawModel;
 module.exports.sizeToAspectRatio = sizeToAspectRatio;
 module.exports.parseDrawVersionsFromChunk = parseDrawVersionsFromChunk;
 module.exports.classifyDrawProvider = classifyDrawProvider;
+module.exports.parseDrawImageEntry = parseDrawImageEntry;
+module.exports.getImageDimensions = getImageDimensions;

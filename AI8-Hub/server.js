@@ -717,7 +717,8 @@ async function handleAi8DrawEdit(req, res, body, drawImages, config, client, dra
     if (!prompt) {
         throw createHttpError(400, "prompt is required for image editing.");
     }
-    const size = String(body.size || "1024x1024").trim() || "1024x1024";
+    const hasInputImage = drawImages.filter(Boolean).length > 0;
+    const size = String(body.size || (hasInputImage ? "auto" : "1024x1024")).trim() || "1024x1024";
     const n = Math.min(Math.max(Number(body.n) || 1, 1), 4);
     const qualityInput = String(body.quality || "high").toLowerCase();
     const quality = ["high", "medium", "low", "auto"].includes(qualityInput) ? qualityInput : "high";
@@ -786,7 +787,7 @@ async function handleAi8DrawChatCompletion(req, res, body, config, client, drawM
         bareModel,
         prompt: prompt || "Edit this image.",
         images: inputImages.slice(0, 3),
-        size: "1024x1024",
+        size: inputImages.length > 0 ? "auto" : "1024x1024",
         n: 1,
         quality: "high",
         isAborted: () => clientAborted,

@@ -4,6 +4,36 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const AI8Client = require("../lib/ai8-client");
+const { parseDrawImageEntry, getImageDimensions } = require("../lib/ai8-client");
+
+function makePngBuffer(width, height) {
+    const buffer = Buffer.alloc(24);
+    buffer.writeUInt32BE(0x89504e47, 0);
+    buffer.write("IHDR", 12, "ascii");
+    buffer.writeUInt32BE(width, 16);
+    buffer.writeUInt32BE(height, 20);
+    return buffer;
+}
+
+test("getImageDimensions parses PNG header", () => {
+    const dims = getImageDimensions(makePngBuffer(1279, 1706));
+    assert.deepEqual(dims, { width: 1279, height: 1706 });
+});
+
+test("parseDrawImageEntry builds metadata object from data url", () => {
+    const png = makePngBuffer(10, 20);
+    const dataUrl = `data:image/png;base64,${png.toString("base64")}`;
+    const entry = parseDrawImageEntry(dataUrl, 0);
+    assert.equal(entry.base64, dataUrl);
+    assert.equal(entry.name, "image-1.png");
+    assert.equal(entry.size, png.length);
+    assert.equal(entry.width, 10);
+    assert.equal(entry.height, 20);
+});
+
+test("parseDrawImageEntry returns null for non-data-url input", () => {
+    assert.equal(parseDrawImageEntry("https://example.com/a.png", 0), null);
+});
 
 test("submitDraw normalizes string images into base64 objects", async () => {
     const client = new AI8Client({ authToken: "token-1" });
@@ -30,7 +60,7 @@ test("submitDraw normalizes string images into base64 objects", async () => {
 
     assert.equal(String(captured.url), "https://ai8.rcouyi.com/api/draw");
     const body = JSON.parse(captured.options.body);
-    assert.deepEqual(body.images, [{ base64: "data:image/png;base64,AAAA", name: "image-1.png" }]);
+    assert.deepEqual(body.args.images, [{ base64: "data:image/png;base64,AAAA", name: "image-1.png", size: 3 }]);
     assert.equal(body.action, "IMAGINE");
     assert.equal(body.args.version, "gpt-image-2");
 });
@@ -54,5 +84,5 @@ test("submitDraw omits images field when none provided", async () => {
     }
 
     const body = JSON.parse(captured.options.body);
-    assert.equal(body.images, undefined);
+    assert.equal(body.args.images, undefined);
 });
