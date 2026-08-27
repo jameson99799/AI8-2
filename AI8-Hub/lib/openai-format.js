@@ -33,27 +33,15 @@ function toDisplayModelId(value) {
 
 function buildModelsList(models) {
     const created = Math.floor(Date.now() / 1000);
-    const usedIds = new Set();
 
     return {
-        data: models.map(model => {
-            const baseId = toDisplayModelId(model.origId || model.value);
-            const displayName = toDisplayModelId(model.label || model.value);
-            let id = baseId;
-            if (usedIds.has(id)) {
-                // Two sources expose the same bare id (e.g. same model on two
-                // channels): keep a unique id so Cherry Studio can list both.
-                id = toDisplayModelId(model.value);
-            }
-            usedIds.add(id);
-            return {
-                created,
-                id,
-                object: "model",
-                owned_by: model?.attr?.providerName || "ai8",
-                name: displayName || id,
-            };
-        }),
+        data: models.map(model => ({
+            created,
+            id: toDisplayModelId(model.value),
+            object: "model",
+            owned_by: model?.attr?.providerName || "ai8",
+            name: toDisplayModelId(model.label || model.value),
+        })),
         object: "list",
     };
 }
