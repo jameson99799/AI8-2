@@ -30,6 +30,56 @@ test("buildModelsList returns short ids for OpenAI-compatible model listing", ()
     assert.equal(payload.data[0].owned_by, "OpenAI");
 });
 
+test("buildModelsList exposes clean ids while carrying the channel tag in name", () => {
+    const payload = buildModelsList([
+        {
+            attr: { providerName: "ai8" },
+            label: "gpt-image-2【AI8直连】",
+            origId: "gpt-image-2",
+            value: "gpt-image-2【AI8直连】",
+        },
+        {
+            attr: { providerName: "ai8" },
+            label: "gpt-4.1-mini【AI8直连】",
+            origId: "openai_chat::gpt-4.1-mini",
+            value: "openai_chat::gpt-4.1-mini【AI8直连】",
+        },
+        {
+            attr: { providerName: "ouyi" },
+            label: "gpt-4o【ouyi】",
+            origId: "gpt-4o",
+            value: "gpt-4o【ouyi】",
+        },
+    ]);
+
+    assert.equal(payload.data[0].id, "gpt-image-2");
+    assert.equal(payload.data[0].name, "gpt-image-2【AI8直连】");
+    assert.equal(payload.data[1].id, "gpt-4.1-mini");
+    assert.equal(payload.data[1].name, "gpt-4.1-mini【AI8直连】");
+    assert.equal(payload.data[2].id, "gpt-4o");
+    assert.equal(payload.data[2].name, "gpt-4o【ouyi】");
+});
+
+test("buildModelsList falls back to a unique id when two sources share a bare id", () => {
+    const payload = buildModelsList([
+        {
+            attr: { providerName: "ai8" },
+            label: "gpt-4o【AI8直连】",
+            origId: "openai_chat::gpt-4o",
+            value: "openai_chat::gpt-4o【AI8直连】",
+        },
+        {
+            attr: { providerName: "ouyi" },
+            label: "gpt-4o【ouyi】",
+            origId: "gpt-4o",
+            value: "gpt-4o【ouyi】",
+        },
+    ]);
+
+    assert.equal(payload.data[0].id, "gpt-4o");
+    assert.equal(payload.data[1].id, "gpt-4o【ouyi】");
+});
+
 test("buildAdminModelsList keeps raw model ids while exposing short display values", () => {
     const payload = buildAdminModelsList([
         {
