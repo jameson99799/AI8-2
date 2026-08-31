@@ -503,6 +503,29 @@ async function handleChatCompletion(req, res, body) {
     const thinking = resolveThinking(req, body, config.ai8DefaultThinking);
 
     const isEphemeralSession = true;
+    const deleteSessionAfterResponse = Boolean(config.ai8DeleteSessionAfterResponse && isEphemeralSession);
+
+    if (body.stream) {
+        // Streaming sends the SSE head before session creation so the client
+        // (and any front proxy with an aggressive first-byte timeout) receives
+        // bytes immediately; session setup then happens while the stream is open.
+        await handleStreamingChatCompletion(req, res, {
+            client,
+            completionId,
+            created,
+            deleteSessionAfterResponse,
+            maxToken: resolveSessionMaxToken(body.max_tokens, config),
+            model: resolvedModel.value,
+            preparedMessages,
+            sessionPrompt,
+            streamIncludeUsage: Boolean(body?.stream_options?.include_usage),
+            temperature: body.temperature,
+            thinking,
+            toolMode,
+        });
+        return;
+    }
+
     let session = await client.createSession({
         maxToken: resolveSessionMaxToken(body.max_tokens, config),
         model: resolvedModel.value,
@@ -519,22 +542,6 @@ async function handleChatCompletion(req, res, body) {
     res.setHeader("x-ai8-session-id", String(session.id));
     res.setHeader("x-ai8-session-prompt-source", String(sessionPrompt.source || "none"));
     res.setHeader("x-ai8-session-prompt-present", sessionPrompt.value ? "true" : "false");
-
-    if (body.stream) {
-        await handleStreamingChatCompletion(req, res, {
-            client,
-            completionId,
-            created,
-            deleteSessionAfterResponse: Boolean(config.ai8DeleteSessionAfterResponse && isEphemeralSession),
-            model: resolvedModel.value,
-            preparedMessages,
-            sessionId: session.id,
-            streamIncludeUsage: Boolean(body?.stream_options?.include_usage),
-            thinking,
-            toolMode,
-        });
-        return;
-    }
 
     const abortController = new AbortController();
     req.on("close", () => abortController.abort());
@@ -1123,10 +1130,12 @@ async function handleStreamingChatCompletion(req, res, options) {
         completionId,
         created,
         deleteSessionAfterResponse,
+        maxToken,
         model,
         preparedMessages,
-        sessionId,
+        sessionPrompt,
         streamIncludeUsage,
+        temperature,
         thinking,
         toolMode = false,
     } = options;
@@ -1147,6 +1156,15 @@ async function handleStreamingChatCompletion(req, res, options) {
         res.flushHeaders();
     }
 
+    // Track real writes so a heartbeat can keep the connection (and any front
+    // proxy with an aggressive idle timeout) alive while AI8 is silent.
+    const originalWrite = res.write.bind(res);
+    let lastWriteAt = Date.now();
+    res.write = function(chunk, ...rest) {
+        lastWriteAt = Date.now();
+        return originalWrite(chunk, ...rest);
+    };
+
     writeSse(
         res,
         buildChatCompletionChunk({
@@ -1159,6 +1177,60 @@ async function handleStreamingChatCompletion(req, res, options) {
             model,
         })
     );
+
+    const heartbeat = setInterval(() => {
+        if (res.writableEnded || res.destroyed) {
+            return;
+        }
+        if (Date.now() - lastWriteAt >= 2500) {
+            res.write(": keep-alive\n\n");
+            lastWriteAt = Date.now();
+        }
+    }, 1000);
+    if (typeof heartbeat.unref === "function") {
+        heartbeat.unref();
+    }
+
+    let sessionId = null;
+    try {
+        const session = await client.createSession({
+            maxToken,
+            model,
+            prompt: sessionPrompt.value,
+            temperature,
+        });
+        sessionId = session?.id ?? null;
+        if (sessionPrompt.value && sessionId !== null) {
+            await client.updateSession(session, {
+                prompt: sessionPrompt.value,
+            });
+        }
+    } catch (error) {
+        clearInterval(heartbeat);
+        if (abortController.signal.aborted) {
+            res.end();
+            return;
+        }
+        logger.warn("AI8 stream session creation failed", {
+            error: error?.message || String(error),
+            model,
+        });
+        if (!res.writableEnded) {
+            writeSse(
+                res,
+                buildChatCompletionChunk({
+                    created,
+                    delta: {},
+                    finishReason: "stop",
+                    id: completionId,
+                    model,
+                })
+            );
+            res.write("data: [DONE]\n\n");
+            res.end();
+        }
+        return;
+    }
 
     try {
         const streamResult = await client.streamChatCompletion(
@@ -1216,7 +1288,8 @@ async function handleStreamingChatCompletion(req, res, options) {
 
         finalRecord = finalRecord || streamResult?.record || null;
     } catch (error) {
-        if (deleteSessionAfterResponse) {
+        clearInterval(heartbeat);
+        if (deleteSessionAfterResponse && sessionId !== null) {
             scheduleSessionDeletion(
                 client,
                 sessionId,
@@ -1300,10 +1373,11 @@ async function handleStreamingChatCompletion(req, res, options) {
         );
     }
 
+    clearInterval(heartbeat);
     res.write("data: [DONE]\n\n");
     res.end();
 
-    if (deleteSessionAfterResponse) {
+    if (deleteSessionAfterResponse && sessionId !== null) {
         scheduleSessionDeletion(client, sessionId, "stream_response");
     }
 }

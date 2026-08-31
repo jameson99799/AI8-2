@@ -427,18 +427,15 @@ class AI8Client {
         return response.text();
     }
 
-    async resolveModel(model) {
-        const requested = String(model || this.defaultModel || "").trim();
-        if (!requested) {
-            throw this._buildError("AI8 model is required.", 400);
+    _findModelEntry(models, requested) {
+        const normalizedRequested = String(requested || "").toLowerCase();
+        if (!normalizedRequested) {
+            return null;
         }
-
-        const models = await this.fetchModels();
-        const normalizedRequested = requested.toLowerCase();
 
         const exactMatch = models.find(item => String(item?.value || "").toLowerCase() === normalizedRequested);
         if (exactMatch) {
-            return exactMatch;
+            return { model: exactMatch };
         }
 
         const shortMatches = models.filter(item => {
@@ -447,14 +444,38 @@ class AI8Client {
         });
 
         if (shortMatches.length === 1) {
-            return shortMatches[0];
+            return { model: shortMatches[0] };
         }
 
         if (shortMatches.length > 1) {
+            return { ambiguous: true };
+        }
+
+        return null;
+    }
+
+    async resolveModel(model) {
+        const requested = String(model || this.defaultModel || "").trim();
+        if (!requested) {
+            throw this._buildError("AI8 model is required.", 400);
+        }
+
+        let found = this._findModelEntry(await this.fetchModels(), requested);
+        if (!found) {
+            // The cached model template may lag the upstream catalog; refresh
+            // once before declaring the model unknown.
+            found = this._findModelEntry(await this.fetchModels({ forceRefresh: true }), requested);
+        }
+
+        if (found?.ambiguous) {
             throw this._buildError(
                 `Model "${requested}" is ambiguous on AI8. Use the full provider-qualified model id instead.`,
                 400
             );
+        }
+
+        if (found?.model) {
+            return found.model;
         }
 
         throw this._buildError(`Model "${requested}" was not found on AI8.`, 400);
