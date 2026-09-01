@@ -102,15 +102,21 @@ function anthropicToOpenAiRequest(body) {
             }
 
             if (msg.role === "assistant") {
-                const astMsg = { role: "assistant", content: normalizedContent };
+                const astMsg = {
+                    role: "assistant",
+                    content: (toolCalls && toolCalls.length > 0 && !normalizedContent) ? null : normalizedContent
+                };
                 if (toolCalls) astMsg.tool_calls = toolCalls;
                 messages.push(astMsg);
             } else {
                 if (toolResults.length > 0) {
+                    // OpenAI requires tool messages to directly follow the
+                    // assistant tool_calls message; any companion text from the
+                    // same Claude user message must come AFTER the tool results.
+                    messages.push(...toolResults);
                     if (normalizedContent) {
                         messages.push({ role: "user", content: normalizedContent });
                     }
-                    messages.push(...toolResults);
                 } else {
                     messages.push({
                         role: "user",

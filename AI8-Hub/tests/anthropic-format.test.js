@@ -47,12 +47,46 @@ test("tool_use is converted to assistant tool_calls, never leaked into content",
     // content must never contain the raw tool_use block
     const content = JSON.stringify(assistant.content);
     assert.ok(!content.includes("tool_use"), "assistant content must not leak tool_use blocks");
-    assert.equal(assistant.content, "");
+    assert.equal(assistant.content, null);
 
     const tool = result.messages.find(m => m.role === "tool");
     assert.ok(tool, "tool_result becomes a tool-role message");
     assert.equal(tool.tool_call_id, "toolu_01");
     assert.equal(tool.content, "Sunny, 22C");
+});
+
+test("tool messages directly follow the assistant tool_calls message even when the same Claude user message carries companion text", () => {
+    const result = anthropicToOpenAiRequest({
+        model: "claude-sonnet-4-6",
+        messages: [
+            {
+                role: "user",
+                content: [{ type: "text", text: "Check the disk" }],
+            },
+            {
+                role: "assistant",
+                content: [
+                    { type: "tool_use", id: "toolu_10", name: "Bash", input: { command: "df -h" } },
+                ],
+            },
+            {
+                role: "user",
+                content: [
+                    { type: "tool_result", tool_use_id: "toolu_10", content: "Filesystem 50%" },
+                    { type: "text", text: "Also check memory" },
+                ],
+            },
+        ],
+    });
+
+    const roles = result.messages.map(m => m.role);
+    assert.deepEqual(roles, ["user", "assistant", "tool", "user"]);
+    // the tool message must immediately follow the assistant tool_calls message
+    assert.equal(result.messages[1].role, "assistant");
+    assert.equal(result.messages[1].tool_calls[0].id, "toolu_10");
+    assert.equal(result.messages[2].role, "tool");
+    assert.equal(result.messages[2].tool_call_id, "toolu_10");
+    assert.equal(result.messages[3].content, "Also check memory");
 });
 
 test("assistant with text plus tool_use keeps text and tool_calls", () => {
