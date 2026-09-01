@@ -113,6 +113,27 @@ test("assistant with text plus tool_use keeps text and tool_calls", () => {
     assert.equal(assistant.tool_calls[0].function.name, "search");
 });
 
+test("thinking blocks become reasoning_content for DeepSeek-style pass-back", () => {
+    const result = anthropicToOpenAiRequest({
+        model: "deepseek-v4-flash",
+        messages: [
+            { role: "user", content: "analyze this code" },
+            {
+                role: "assistant",
+                content: [
+                    { type: "thinking", thinking: "I need to inspect the structure first." },
+                    { type: "text", text: "Let me analyze." },
+                ],
+            },
+            { role: "user", content: "continue" },
+        ],
+    });
+
+    const assistant = result.messages.find(m => m.role === "assistant");
+    assert.equal(assistant.reasoning_content, "I need to inspect the structure first.");
+    assert.equal(assistant.content, "Let me analyze.");
+});
+
 test("plain string content and text-only array are unchanged", () => {
     const stringResult = anthropicToOpenAiRequest({
         model: "m",

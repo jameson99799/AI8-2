@@ -394,6 +394,18 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
     }
     
     const proxyBody = { ...body, model: actualModel };
+
+    if (targetChannel.stripReasoning && Array.isArray(proxyBody.messages)) {
+        // Strict upstreams (e.g. NVIDIA) reject the DeepSeek-style
+        // reasoning_content field; opt-in per channel via stripReasoning.
+        proxyBody.messages = proxyBody.messages.map(message => {
+            if (message && typeof message === "object" && "reasoning_content" in message) {
+                const { reasoning_content, ...rest } = message;
+                return rest;
+            }
+            return message;
+        });
+    }
     
     const abortController = new AbortController();
     req.on("close", () => abortController.abort());

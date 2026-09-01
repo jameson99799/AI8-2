@@ -56,6 +56,7 @@ function anthropicToOpenAiRequest(body) {
             let normalizedContent = "";
             let toolCalls = null;
             let toolResults = [];
+            let thinkingParts = [];
 
             if (typeof msg.content === "string") {
                 normalizedContent = msg.content;
@@ -68,6 +69,10 @@ function anthropicToOpenAiRequest(body) {
                         textParts.push({ type: "text", text: part });
                     } else if (part.type === "text") {
                         textParts.push({ type: "text", text: part.text });
+                    } else if (part.type === "thinking") {
+                        // DeepSeek-style thinking must be passed back verbatim
+                        // so reasoning-mode upstreams accept the conversation.
+                        thinkingParts.push(typeof part.thinking === "string" ? part.thinking : "");
                     } else if (part.type === "image" && part.source && part.source.data) {
                         mediaParts.push({
                             type: "image_url",
@@ -107,6 +112,7 @@ function anthropicToOpenAiRequest(body) {
                     content: (toolCalls && toolCalls.length > 0 && !normalizedContent) ? null : normalizedContent
                 };
                 if (toolCalls) astMsg.tool_calls = toolCalls;
+                if (thinkingParts.length > 0) astMsg.reasoning_content = thinkingParts.join("\n");
                 messages.push(astMsg);
             } else {
                 if (toolResults.length > 0) {
