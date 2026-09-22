@@ -377,6 +377,88 @@ function lookupGptAllToolSupport(actualModel, requestModel) {
     return cached._isToolSupported === true;
 }
 
+/**
+ * JSON Schema keywords that Gemini's `function_declarations` parameters accept.
+ * Gemini only supports a subset of OpenAPI Schema; anything outside this set
+ * makes the upstream reject the request (e.g. `propertyNames`, `$ref`,
+ * `pattern`, `oneOf`). Shape/type information needed for tool calling is kept.
+ */
+const GEMINI_SCHEMA_VALUE_KEYS = new Set([
+    "type", "format", "title", "description", "nullable", "enum", "default",
+    "example", "required", "propertyOrdering",
+    "minItems", "maxItems", "minimum", "maximum",
+]);
+
+function sanitizeJsonSchema(node, depth = 0) {
+    if (depth > 12 || node === null || typeof node !== "object") {
+        return node;
+    }
+
+    if (Array.isArray(node)) {
+        return node.map(item => sanitizeJsonSchema(item, depth + 1));
+    }
+
+    const sanitized = {};
+
+    for (const [key, value] of Object.entries(node)) {
+        if (GEMINI_SCHEMA_VALUE_KEYS.has(key)) {
+            sanitized[key] = value;
+            continue;
+        }
+
+        if (key === "properties") {
+            if (value && typeof value === "object" && !Array.isArray(value)) {
+                const properties = {};
+                for (const [propertyName, propertySchema] of Object.entries(value)) {
+                    properties[propertyName] = sanitizeJsonSchema(propertySchema, depth + 1);
+                }
+                sanitized.properties = properties;
+            }
+            continue;
+        }
+
+        if (key === "items" || key === "additionalProperties") {
+            sanitized[key] = sanitizeJsonSchema(value, depth + 1);
+            continue;
+        }
+
+        if (key === "anyOf") {
+            sanitized.anyOf = Array.isArray(value)
+                ? value.map(item => sanitizeJsonSchema(item, depth + 1))
+                : value;
+            continue;
+        }
+
+        // Everything else (propertyNames, $schema, pattern, oneOf, const, ...)
+        // is not understood by Gemini and would reject the whole request.
+    }
+
+    return sanitized;
+}
+
+function sanitizeToolSchemas(tools) {
+    return tools
+        .map(tool => {
+            if (!tool || typeof tool !== "object") {
+                return tool;
+            }
+
+            const fn = tool.function;
+            if (!fn || typeof fn !== "object" || !fn.parameters || typeof fn.parameters !== "object") {
+                return tool;
+            }
+
+            return {
+                ...tool,
+                function: {
+                    ...fn,
+                    parameters: sanitizeJsonSchema(fn.parameters),
+                },
+            };
+        })
+        .filter(Boolean);
+}
+
 async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, buildErrorPayload, isNativeClaude = false, logger = null) {
     let safeBase = targetChannel.baseUrl.trim().replace(/\/+$/, "");
     
@@ -394,6 +476,13 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
     }
     
     const proxyBody = { ...body, model: actualModel };
+
+    if (!isNativeClaude && Array.isArray(proxyBody.tools)) {
+        // Gemini-backed upstreams translate tools into `function_declarations`
+        // and only accept a subset of JSON Schema; keywords such as
+        // `propertyNames` make them reject the whole request with a 400.
+        proxyBody.tools = sanitizeToolSchemas(proxyBody.tools);
+    }
 
     if (targetChannel.stripReasoning && Array.isArray(proxyBody.messages)) {
         // Strict upstreams (e.g. NVIDIA) reject the DeepSeek-style
@@ -506,4 +595,4 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
     }
 }
 
-module.exports = { buildGptAllClient, buildFreeGptClient, clearResolutionCache, fetchAggregatedModels, proxyToCustomChannel, resolveTargetChannel, isBlacklisted, filterCachedModels };
+module.exports = { buildGptAllClient, buildFreeGptClient, clearResolutionCache, fetchAggregatedModels, proxyToCustomChannel, resolveTargetChannel, isBlacklisted, filterCachedModels, sanitizeToolSchemas };
