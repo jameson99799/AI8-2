@@ -195,11 +195,6 @@ function openAiToAnthropicChunk(openaiChunk, state = {}) {
             ? delta.reasoning_content
             : (typeof delta.reasoning === "string" && delta.reasoning ? delta.reasoning : "");
         if (reasoning) {
-            if (state.inTool) {
-                events.push({ type: "content_block_stop", index: state.currentIndex });
-                state.inTool = false;
-                state.currentIndex++;
-            }
             if (!state.inThink) {
                 state.inThink = true;
                 events.push({
@@ -224,13 +219,6 @@ function openAiToAnthropicChunk(openaiChunk, state = {}) {
                 });
                 events.push({ type: "content_block_stop", index: state.currentIndex });
                 state.inThink = false;
-                state.currentIndex++;
-            }
-            if (state.inTool) {
-                // Text arriving while a tool_use block is still open must close
-                // it first, otherwise two blocks share the same index.
-                events.push({ type: "content_block_stop", index: state.currentIndex });
-                state.inTool = false;
                 state.currentIndex++;
             }
             if (!state.hasStartedText) {
