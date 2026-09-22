@@ -172,18 +172,7 @@ function anthropicToOpenAiRequest(body) {
 }
 
 function openAiToAnthropicChunk(openaiChunk, state = {}) {
-    if (!openaiChunk.choices || openaiChunk.choices.length === 0) {
-        // Usage-only trailing chunk (stream_options.include_usage): report the
-        // real token usage before the client receives message_stop.
-        if (openaiChunk.usage && typeof openaiChunk.usage === "object" && state.finalStopReason) {
-            return {
-                type: "message_delta",
-                delta: { stop_reason: state.finalStopReason, stop_sequence: null },
-                usage: { output_tokens: Number(openaiChunk.usage.completion_tokens) || 0 }
-            };
-        }
-        return null;
-    }
+    if (!openaiChunk.choices || openaiChunk.choices.length === 0) return null;
     const choice = openaiChunk.choices[0];
     const delta = choice.delta;
     
@@ -349,21 +338,9 @@ function openAiToAnthropicChunk(openaiChunk, state = {}) {
              state.currentIndex++;
         }
         
-        const stopReason = choice.finish_reason === "stop"
-            ? "end_turn"
-            : (choice.finish_reason === "tool_calls" ? "tool_use" : (choice.finish_reason === "length" ? "max_tokens" : "end_turn"));
-        state.finalStopReason = stopReason;
-
-        // Use the upstream usage when the finish chunk carries it; otherwise
-        // report 1 (the usage-only chunk that follows will correct it).
-        const finishUsage = openaiChunk.usage && typeof openaiChunk.usage === "object"
-            ? { output_tokens: Number(openaiChunk.usage.completion_tokens) || 0 }
-            : { output_tokens: 1 };
-
-        // message_stop is emitted once by the stream wrapper when [DONE] is
-        // seen; emitting it here as well would terminate the stream twice.
         events.push(
-            { type: "message_delta", delta: { stop_reason: stopReason }, usage: finishUsage }
+            { type: "message_delta", delta: { stop_reason: choice.finish_reason === "stop" ? "end_turn" : (choice.finish_reason === "tool_calls" ? "tool_use" : "max_tokens") }, usage: { output_tokens: 1 } },
+            { type: "message_stop" }
         );
     }
     

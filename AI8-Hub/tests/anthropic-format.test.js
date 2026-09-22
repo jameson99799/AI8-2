@@ -134,52 +134,6 @@ test("thinking blocks become reasoning_content for DeepSeek-style pass-back", ()
     assert.equal(assistant.content, "Let me analyze.");
 });
 
-test("chunk converter never emits message_stop (the stream wrapper owns the terminator)", () => {
-    const converted = openAiToAnthropicChunk(
-        {
-            choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
-            model: "mock",
-        },
-        { inTool: true, currentIndex: 0 }
-    );
-
-    const events = Array.isArray(converted) ? converted : (converted ? [converted] : []);
-    assert.ok(events.some(event => event.type === "message_delta"), "message_delta is emitted");
-    assert.ok(!events.some(event => event.type === "message_stop"), "message_stop must not be emitted here");
-});
-
-test("interleaved reasoning must not close an open tool_use block", () => {
-    const state = {};
-
-    openAiToAnthropicChunk(
-        {
-            choices: [{
-                index: 0,
-                delta: { tool_calls: [{ index: 0, id: "call_1", type: "function", function: { name: "Bash", arguments: "" } }] },
-            }],
-        },
-        state
-    );
-    assert.equal(state.inTool, true, "tool block is open");
-    assert.equal(state.currentIndex, 0, "tool block owns index 0");
-
-    // A reasoning delta arriving mid tool call must not terminate the tool block.
-    openAiToAnthropicChunk(
-        { choices: [{ index: 0, delta: { reasoning_content: "thinking..." } }] },
-        state
-    );
-
-    const events = openAiToAnthropicChunk(
-        { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: '{"cmd":"ls"}' } }] } }] },
-        state
-    );
-    const list = Array.isArray(events) ? events : (events ? [events] : []);
-    const argumentDelta = list.find(event => event.type === "content_block_delta" && event.delta?.type === "input_json_delta");
-    assert.ok(argumentDelta, "argument delta is emitted");
-    assert.equal(argumentDelta.index, 0, "argument delta must stay on the tool_use block index");
-    assert.equal(state.inTool, true, "tool block stays open until finish_reason");
-});
-
 test("plain string content and text-only array are unchanged", () => {
     const stringResult = anthropicToOpenAiRequest({
         model: "m",

@@ -43,7 +43,6 @@ test("submitDraw normalizes string images into base64 objects", async () => {
         captured = { url, options };
         return {
             ok: true,
-            text: async () => JSON.stringify({ code: 0, data: { taskId: "t-1" }, msg: "" }),
             json: async () => ({ code: 0, data: { taskId: "t-1" }, msg: "" }),
         };
     };
@@ -76,7 +75,6 @@ test("submitDraw omits images field when none provided", async () => {
         captured = { url, options };
         return {
             ok: true,
-            text: async () => JSON.stringify({ code: 0, data: { taskId: "t-2" }, msg: "" }),
             json: async () => ({ code: 0, data: { taskId: "t-2" }, msg: "" }),
         };
     };
@@ -99,7 +97,6 @@ test("submitDraw builds google-draw args matching official client", async () => 
         captured = { url, options };
         return {
             ok: true,
-            text: async () => JSON.stringify({ code: 0, data: { taskId: "t-3" }, msg: "" }),
             json: async () => ({ code: 0, data: { taskId: "t-3" }, msg: "" }),
         };
     };

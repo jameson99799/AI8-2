@@ -1,12 +1,6 @@
 "use strict";
 
-const dns = require("dns");
-const net = require("net");
 const path = require("path");
-
-const DEFAULT_MAX_REMOTE_BYTES = 32 * 1024 * 1024;
-const MAX_REDIRECT_HOPS = 4;
-const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
 const MIME_EXTENSION_MAP = {
     "application/json": ".json",
@@ -89,148 +83,18 @@ function buildDataUrl(mimeType, base64) {
     return `data:${normalizedMimeType};base64,${normalizedBase64}`;
 }
 
-function isPrivateAddress(address) {
-    const normalized = String(address || "").trim().toLowerCase();
-    if (!normalized) {
-        return true;
-    }
-
-    // IPv4-mapped IPv6 form (::ffff:127.0.0.1)
-    const mapped = normalized.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-    const candidate = mapped ? mapped[1] : normalized;
-
-    if (net.isIP(candidate) === 4) {
-        const [a, b] = candidate.split(".").map(Number);
-        if (a === 0 || a === 10 || a === 127) return true;
-        if (a === 169 && b === 254) return true; // link-local + cloud metadata
-        if (a === 172 && b >= 16 && b <= 31) return true;
-        if (a === 192 && b === 168) return true;
-        if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
-        if (a >= 224) return true; // multicast / reserved
-        return false;
-    }
-
-    if (net.isIP(candidate) === 6) {
-        if (candidate === "::" || candidate === "::1") return true;
-        if (candidate.startsWith("fc") || candidate.startsWith("fd")) return true; // unique local
-        if (candidate.startsWith("fe80")) return true; // link-local
-        if (candidate.startsWith("ff")) return true; // multicast
-        return false;
-    }
-
-    return false;
-}
-
-/**
- * Reject URLs that point at loopback/private/link-local addresses so a client
- * (or model output) cannot make the server fetch internal resources.
- */
-async function assertSafeRemoteUrl(url) {
-    let parsed;
-    try {
-        parsed = new URL(url);
-    } catch (error) {
-        throw new Error(`Invalid URL: ${url}`);
-    }
-
-    if (!/^https?:$/i.test(parsed.protocol)) {
-        throw new Error(`Unsupported URL protocol: ${parsed.protocol}`);
-    }
-
-    const hostname = parsed.hostname.replace(/^\[|\]$/g, "").toLowerCase();
-    if (!hostname) {
-        throw new Error("URL hostname is empty.");
-    }
-    if (hostname === "localhost" || hostname.endsWith(".localhost")) {
-        throw new Error(`Refusing to fetch local address: ${hostname}`);
-    }
-
-    if (net.isIP(hostname)) {
-        if (isPrivateAddress(hostname)) {
-            throw new Error(`Refusing to fetch private address: ${hostname}`);
-        }
-        return;
-    }
-
-    const records = await dns.promises.lookup(hostname, { all: true }).catch(() => []);
-    if (records.length === 0) {
-        throw new Error(`Failed to resolve host: ${hostname}`);
-    }
-
-    for (const record of records) {
-        if (isPrivateAddress(record.address)) {
-            throw new Error(`Refusing to fetch private address: ${hostname} -> ${record.address}`);
-        }
-    }
-}
-
-async function readBodyWithLimit(response, maxBytes) {
-    if (!response.body) {
-        const buffer = Buffer.from(await response.arrayBuffer());
-        if (buffer.length > maxBytes) {
-            throw new Error(`Remote file exceeds the ${maxBytes} byte limit.`);
-        }
-        return buffer;
-    }
-
-    const chunks = [];
-    let total = 0;
-    const reader = response.body.getReader();
-    try {
-        for (;;) {
-            const { done, value } = await reader.read();
-            if (done) {
-                break;
-            }
-            total += value.length;
-            if (total > maxBytes) {
-                throw new Error(`Remote file exceeds the ${maxBytes} byte limit.`);
-            }
-            chunks.push(Buffer.from(value));
-        }
-    } finally {
-        try {
-            await reader.cancel();
-        } catch (cancelError) {
-            // Reader may already be closed.
-        }
-        reader.releaseLock();
-    }
-
-    return Buffer.concat(chunks);
-}
-
 async function fetchUrlAsDataUrl(url, options = {}) {
     const timeoutMs = Number.isFinite(Number(options.timeoutMs)) ? Number(options.timeoutMs) : 60000;
-    const maxBytes = Number.isFinite(Number(options.maxBytes)) ? Number(options.maxBytes) : DEFAULT_MAX_REMOTE_BYTES;
     const abortController = new AbortController();
     const timeout = setTimeout(() => abortController.abort(), timeoutMs);
 
     try {
-        let currentUrl = url;
-        let response = null;
+        const response = await fetch(url, {
+            signal: abortController.signal,
+        });
 
-        for (let hop = 0; hop < MAX_REDIRECT_HOPS; hop++) {
-            await assertSafeRemoteUrl(currentUrl);
-            response = await fetch(currentUrl, {
-                signal: abortController.signal,
-                redirect: "manual",
-            });
-
-            if (REDIRECT_STATUSES.has(response.status)) {
-                const location = response.headers.get("location");
-                if (!location) {
-                    break;
-                }
-                currentUrl = new URL(location, currentUrl).toString();
-                continue;
-            }
-
-            break;
-        }
-
-        if (!response || !response.ok) {
-            throw new Error(`Failed to fetch "${url}" (${response ? response.status : "no response"}).`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch "${url}" (${response.status}).`);
         }
 
         const mimeType = String(response.headers.get("content-type") || "application/octet-stream")
@@ -238,8 +102,8 @@ async function fetchUrlAsDataUrl(url, options = {}) {
             .trim()
             .toLowerCase();
 
-        const buffer = await readBodyWithLimit(response, maxBytes);
-        const base64 = buffer.toString("base64");
+        const arrayBuffer = await response.arrayBuffer();
+        const base64 = Buffer.from(arrayBuffer).toString("base64");
 
         return {
             data: buildDataUrl(mimeType, base64),
@@ -367,15 +231,11 @@ function isProbablyImageFile(file = {}) {
 }
 
 module.exports = {
-    assertSafeRemoteUrl,
     contentPartToAi8File,
     ensureFileName,
     extractAi8Images,
     extractMimeTypeFromDataUrl,
-    fetchUrlAsDataUrl,
     isProbablyImageFile,
-    isPrivateAddress,
     normalizeAi8FileInput,
     normalizeUrlLikeValue,
-    readBodyWithLimit,
 };

@@ -463,14 +463,8 @@ class AI8Client {
         let found = this._findModelEntry(await this.fetchModels(), requested);
         if (!found) {
             // The cached model template may lag the upstream catalog; refresh
-            // once before declaring the model unknown. Throttle repeated
-            // refreshes so bogus model names cannot hammer the upstream.
-            const now = Date.now();
-            const lastForcedRefreshAt = this._lastForcedTemplateRefreshAt || 0;
-            if (now - lastForcedRefreshAt >= 30000) {
-                this._lastForcedTemplateRefreshAt = now;
-                found = this._findModelEntry(await this.fetchModels({ forceRefresh: true }), requested);
-            }
+            // once before declaring the model unknown.
+            found = this._findModelEntry(await this.fetchModels({ forceRefresh: true }), requested);
         }
 
         if (found?.ambiguous) {
@@ -664,7 +658,6 @@ class AI8Client {
                 }
 
                 if (data === "[DONE]") {
-                    this._flushThinkingState(thinkingState, handlers);
                     if (typeof handlers.onDone === "function") {
                         handlers.onDone();
                     }
@@ -719,67 +712,6 @@ class AI8Client {
             }
         }
 
-        // The upstream may close the stream without a trailing blank line:
-        // flush the decoder and process the residual event so the last record
-        // (or a split multi-byte character) is not lost.
-        buffer += decoder.decode();
-        if (buffer.length > readOffset) {
-            buffer += "\n\n";
-        }
-
-        for (;;) {
-            const boundary = this._findEventBoundary(buffer, readOffset);
-            if (!boundary) {
-                break;
-            }
-
-            const rawEvent = buffer.slice(readOffset, boundary.index);
-            readOffset = boundary.index + boundary.length;
-            const data = this._readEventData(rawEvent);
-            if (!data || data === "[DONE]") {
-                continue;
-            }
-
-            let parsed;
-            try {
-                parsed = JSON.parse(data);
-            } catch (error) {
-                continue;
-            }
-
-            if (parsed?.code !== 0) {
-                continue;
-            }
-
-            if (parsed?.id && !taskId) {
-                taskId = parsed.id;
-            }
-
-            if (typeof parsed?.data === "string") {
-                const split = this._splitThinkingChunk(parsed.data, thinkingState);
-                if (split.reasoning && typeof handlers.onReasoning === "function") {
-                    handlers.onReasoning(split.reasoning, parsed);
-                }
-                if (split.text && typeof handlers.onText === "function") {
-                    handlers.onText(split.text, parsed);
-                }
-                continue;
-            }
-
-            if (parsed?.data && typeof parsed.data === "object") {
-                finalRecord = this._normalizeThinkingRecord(parsed.data, thinkingState);
-                if (parsed.data.taskId && !taskId) {
-                    taskId = parsed.data.taskId;
-                }
-
-                if (typeof handlers.onObject === "function") {
-                    handlers.onObject(finalRecord, parsed);
-                }
-            }
-        }
-
-        this._flushThinkingState(thinkingState, handlers);
-
         if (typeof handlers.onDone === "function") {
             handlers.onDone();
         }
@@ -792,30 +724,15 @@ class AI8Client {
 
     _splitThinkingChunk(chunk, state) {
         if (state.mode === "answer") {
-            // Buffer so a "<think>" marker split across two SSE events is still
-            // detected; a held prefix is flushed as text once it cannot match.
-            state.buffer = (state.buffer || "") + chunk;
-            const marker = "<think>";
-            if (state.buffer.startsWith(marker)) {
-                const remainder = state.buffer.slice(marker.length);
+            if (chunk.startsWith("<think>")) {
                 state.mode = "reasoning";
                 state.buffer = "";
                 state.reasoning = "";
                 state.text = "";
-                if (remainder) {
-                    return this._splitThinkingChunk(remainder, state);
-                }
-                return { reasoning: "", text: "" };
+                return this._splitThinkingChunk(chunk.slice("<think>".length), state);
             }
-
-            if (marker.startsWith(state.buffer)) {
-                return { reasoning: "", text: "" };
-            }
-
-            const flushable = state.buffer;
-            state.buffer = "";
-            state.text += flushable;
-            return { reasoning: "", text: flushable };
+            state.text += chunk;
+            return { reasoning: "", text: chunk };
         }
 
         state.buffer += chunk;
@@ -840,26 +757,6 @@ class AI8Client {
         state.reasoning += flushable;
         state.buffer = held;
         return { reasoning: flushable, text: "" };
-    }
-
-    _flushThinkingState(state, handlers) {
-        if (!state.buffer) {
-            return;
-        }
-
-        const pending = state.buffer;
-        state.buffer = "";
-        if (state.mode === "reasoning") {
-            state.reasoning += pending;
-            if (typeof handlers.onReasoning === "function") {
-                handlers.onReasoning(pending, null);
-            }
-        } else {
-            state.text += pending;
-            if (typeof handlers.onText === "function") {
-                handlers.onText(pending, null);
-            }
-        }
     }
 
     _normalizeThinkingRecord(record, state) {
@@ -892,18 +789,9 @@ class AI8Client {
 
     async requestJson(path, options = {}) {
         const response = await this._fetch(path, options);
-        // Read the body once: calling response.json() and then response.text()
-        // on failure throws "Body is unusable" and hides the upstream error.
-        const rawText = await response.text();
-        let payload;
-        try {
-            payload = JSON.parse(rawText);
-        } catch (error) {
-            throw this._buildError(
-                `AI8 returned a non-JSON response for ${path}: ${rawText.slice(0, 400)}`,
-                502
-            );
-        }
+        const payload = await response.json().catch(async () => {
+            throw this._buildError(`AI8 returned a non-JSON response for ${path}: ${await response.text()}`, 502);
+        });
 
         if (!response.ok || payload?.code !== 0) {
             throw this._normalizeError(payload, response.status);
@@ -967,18 +855,11 @@ class AI8Client {
 
     async _readUnexpectedPayload(response) {
         const contentType = String(response.headers.get("content-type") || "");
-        // Single read: a failed JSON.parse must not trigger a second read of an
-        // already-consumed body.
-        const rawText = await response.text();
         if (contentType.startsWith("application/json")) {
-            try {
-                return JSON.parse(rawText);
-            } catch (error) {
-                return rawText;
-            }
+            return response.json().catch(() => response.text());
         }
 
-        return rawText;
+        return response.text();
     }
 
     _normalizeError(source, status = 500) {

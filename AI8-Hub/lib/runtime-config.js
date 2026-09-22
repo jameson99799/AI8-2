@@ -6,7 +6,6 @@ const path = require("path");
 
 const EDITABLE_FIELDS = [
     "adminToken",
-    "ai8Enabled",
     "ai8AuthToken",
     "ai8BaseUrl",
     "ai8DefaultModel",
@@ -102,7 +101,6 @@ class RuntimeConfigStore {
     getEditableConfig() {
         return {
             adminToken: this.runtimeConfig.adminToken,
-            ai8Enabled: this.runtimeConfig.ai8Enabled,
             ai8AuthToken: this.runtimeConfig.ai8AuthToken,
             ai8BaseUrl: this.runtimeConfig.ai8BaseUrl,
             ai8DefaultModel: this.runtimeConfig.ai8DefaultModel,
@@ -160,7 +158,6 @@ class RuntimeConfigStore {
     _buildBaseRawConfig(defaults) {
         return {
             adminToken: process.env.ADMIN_TOKEN,
-            ai8Enabled: process.env.AI8_ENABLED,
             ai8AuthToken: process.env.AI8_AUTH_TOKEN,
             ai8BaseUrl: process.env.AI8_BASE_URL,
             ai8DefaultModel: process.env.AI8_DEFAULT_MODEL,
@@ -215,9 +212,6 @@ class RuntimeConfigStore {
             const parsed = JSON.parse(content);
             return parsed && typeof parsed === "object" ? parsed : {};
         } catch (error) {
-            // Never fail silently: a broken config file would otherwise look
-            // like "all settings were lost".
-            console.warn(`[ai8-config] Failed to read ${this.storePath}: ${error.message}`);
             return {};
         }
     }
@@ -233,21 +227,7 @@ class RuntimeConfigStore {
 
     _writeOverrideFile(content) {
         fs.mkdirSync(path.dirname(this.storePath), { recursive: true });
-        // Write to a temp file first and rename so a crash or full disk cannot
-        // truncate the live config (tokens, channels, keys).
-        const tempPath = `${this.storePath}.tmp`;
-        const serialized = JSON.stringify(content, null, 2);
-        fs.writeFileSync(tempPath, serialized);
-
-        try {
-            if (fs.existsSync(this.storePath)) {
-                fs.copyFileSync(this.storePath, `${this.storePath}.bak`);
-            }
-        } catch (error) {
-            console.warn(`[ai8-config] Failed to write backup for ${this.storePath}: ${error.message}`);
-        }
-
-        fs.renameSync(tempPath, this.storePath);
+        fs.writeFileSync(this.storePath, JSON.stringify(content, null, 2));
     }
 }
 
@@ -267,7 +247,6 @@ function sanitizeEditablePatch(patch = {}) {
 function normalizeConfig(source = {}) {
     return {
         adminToken: normalizeString(source.adminToken || source.ADMIN_TOKEN),
-        ai8Enabled: parseBoolean(source.ai8Enabled ?? source.AI8_ENABLED, true),
         ai8AuthToken: normalizeString(source.ai8AuthToken || source.AI8_AUTH_TOKEN),
         ai8BaseUrl: normalizeString(source.ai8BaseUrl || source.AI8_BASE_URL || "https://ai8.rcouyi.com/api"),
         ai8DefaultModel: normalizeString(source.ai8DefaultModel || source.AI8_DEFAULT_MODEL || "openai_chat::gpt-4.1-mini"),
@@ -298,7 +277,7 @@ function normalizeConfig(source = {}) {
         ai8AllowedModels: parseCsv(source.ai8AllowedModels ?? source.AI8_ALLOWED_MODELS ?? ""),
         ai8BlacklistedModels: parseCsv(source.ai8BlacklistedModels ?? source.AI8_BLACKLISTED_MODELS ?? ""),
         blacklistedModels: parseCsv(source.blacklistedModels ?? source.BLACKLISTED_MODELS ?? ""),
-        customChannels: normalizeChannels(source.customChannels),
+        customChannels: Array.isArray(source.customChannels) ? source.customChannels : [],
         gptallEnabled: parseBoolean(source.gptallEnabled ?? source.GPTALL_ENABLED, false),
         gptallBaseUrl: normalizeString(source.gptallBaseUrl || source.GPTALL_BASE_URL || "https://gpt-all.chat/api"),
         gptallAuthToken: normalizeString(source.gptallAuthToken || source.GPTALL_AUTH_TOKEN),
@@ -364,47 +343,7 @@ function parseCsv(value) {
         .filter(Boolean);
 }
 
-/**
- * Normalize custom channel entries so a malformed entry (missing name/baseUrl)
- * cannot crash model aggregation or routing with a `.trim()` TypeError.
- */
-function normalizeChannels(value) {
-    if (!Array.isArray(value)) {
-        return [];
-    }
-
-    const channels = [];
-    for (const entry of value) {
-        if (!entry || typeof entry !== "object") {
-            continue;
-        }
-
-        const name = normalizeString(entry.name);
-        if (!name) {
-            continue;
-        }
-
-        channels.push({
-            ...entry,
-            name,
-            baseUrl: normalizeString(entry.baseUrl),
-            apiKey: normalizeString(entry.apiKey),
-            protocol: normalizeString(entry.protocol) || "both",
-            enabled: parseBoolean(entry.enabled, false),
-            models: parseCsv(entry.models ?? []),
-            blacklistedModels: parseCsv(entry.blacklistedModels ?? []),
-            stripReasoning: parseBoolean(entry.stripReasoning, false),
-        });
-    }
-
-    return channels;
-}
-
 function parseNumber(value, fallback) {
-    if (value === undefined || value === null || String(value).trim() === "") {
-        return fallback;
-    }
-
     const number = Number(value);
     return Number.isFinite(number) ? number : fallback;
 }

@@ -7,8 +7,8 @@ ENV PORT=7865
 ENV AI8_CONFIG_PATH=/app/data/config.json
 ENV AI8_LOG_PATH=/app/logs/ai8-adapter.log
 
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+COPY package.json ./
+RUN npm install --omit=dev
 
 COPY server.js ./
 COPY lib ./lib
@@ -16,9 +16,7 @@ COPY admin ./admin
 COPY .env.example ./
 COPY README.md ./
 
-RUN mkdir -p /app/data /app/logs && chown -R node:node /app
-
-USER node
+RUN mkdir -p /app/data /app/logs
 
 EXPOSE 7865
 

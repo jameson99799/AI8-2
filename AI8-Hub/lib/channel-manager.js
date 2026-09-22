@@ -44,16 +44,6 @@ function clearResolutionCache() {
     resolutionCache = new Map();
 }
 
-/**
- * Expire the aggregated model cache and drop cached routing decisions so a
- * config change (new/disabled channel, rotated key) takes effect on the next
- * request instead of up to 5 minutes later.
- */
-function invalidateModelCaches() {
-    modelCache.timestamp = 0;
-    clearResolutionCache();
-}
-
 async function fetchAggregatedModels(client, config, forceRefresh, logger, forAdmin = false) {
     if (!forceRefresh && modelCache.models.length > 0 && Date.now() - modelCache.timestamp < modelCache.ttl) {
         return filterCachedModels(modelCache.models, config, forAdmin);
@@ -107,7 +97,7 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
     }
 
     const customChannelTasks = (config.customChannels || [])
-        .filter(channel => channel.enabled && channel.baseUrl)
+        .filter(channel => channel.enabled)
         .map(channel => {
             let safeBase = channel.baseUrl.trim().replace(/\/+$/, "");
             if (safeBase.endsWith("/chat/completions")) {
@@ -328,7 +318,7 @@ async function resolveTargetChannelUncached(requestModel, config, client, logger
         actualModel = match[1];
         const channelName = match[2];
         const customChannels = config.customChannels || [];
-        targetChannel = customChannels.find(c => c.name === channelName && c.enabled && c.baseUrl);
+        targetChannel = customChannels.find(c => c.name === channelName && c.enabled);
         if (targetChannel) {
             return { targetChannel, actualModel, toolSupported: null };
         }
@@ -369,7 +359,7 @@ async function resolveTargetChannelUncached(requestModel, config, client, logger
             actualModel = cached._actualModel || requestModel;
         } else if (cached && cached._source !== "ai8") {
             const customChannels = config.customChannels || [];
-            targetChannel = customChannels.find(c => c.name === cached._source && c.enabled && c.baseUrl);
+            targetChannel = customChannels.find(c => c.name === cached._source && c.enabled);
             if (targetChannel) {
                 actualModel = cached._actualModel || requestModel;
             }
@@ -418,37 +408,15 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
     }
     
     const abortController = new AbortController();
-    let clientGone = false;
-    let timedOut = false;
-    res.on("close", () => {
-        if (!res.writableFinished) {
-            clientGone = true;
-            abortController.abort();
-        }
-    });
-
-    const upstreamTimeoutMs = Number(targetChannel.requestTimeoutMs) > 0
-        ? Number(targetChannel.requestTimeoutMs)
-        : 300000;
-    const timeoutHandle = setTimeout(() => {
-        timedOut = true;
-        abortController.abort();
-    }, upstreamTimeoutMs);
-    if (typeof timeoutHandle.unref === "function") {
-        timeoutHandle.unref();
-    }
+    req.on("close", () => abortController.abort());
 
     try {
         const reqHeaders = {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${targetChannel.apiKey}`
         };
-        if (targetChannel.apiKey) {
-            reqHeaders["Authorization"] = `Bearer ${targetChannel.apiKey}`;
-            if (isNativeClaude) {
-                reqHeaders["x-api-key"] = targetChannel.apiKey;
-            }
-        }
         if (isNativeClaude) {
+            reqHeaders["x-api-key"] = targetChannel.apiKey;
             reqHeaders["anthropic-version"] = req.headers["anthropic-version"] || "2023-06-01";
             if (req.headers["anthropic-beta"]) {
                 reqHeaders["anthropic-beta"] = req.headers["anthropic-beta"];
@@ -485,45 +453,14 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
             if (typeof res.flushHeaders === "function") {
                 res.flushHeaders();
             }
-
-            const isEventStream = String(ct || "").toLowerCase().includes("text/event-stream");
-            let sawDone = false;
-            let tail = "";
-            let lastWriteAt = Date.now();
+            
             const reader = upstreamRes.body.getReader();
-
-            // Keep the connection alive through upstream silent gaps (long
-            // thinking phases) so a front proxy with a short idle timeout does
-            // not kill the stream mid-response.
-            const heartbeat = isEventStream
-                ? setInterval(() => {
-                    if (res.writableEnded || res.destroyed) {
-                        return;
-                    }
-                    if (Date.now() - lastWriteAt >= 2500) {
-                        res.write(": keep-alive\n\n");
-                        lastWriteAt = Date.now();
-                    }
-                }, 1000)
-                : null;
-            if (heartbeat && typeof heartbeat.unref === "function") {
-                heartbeat.unref();
-            }
-
             try {
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
                     if (value) {
-                        if (isEventStream && !sawDone) {
-                            // Track the tail so a split "[DONE]" is still detected.
-                            tail = (tail + Buffer.from(value).toString("utf8")).slice(-64);
-                            if (tail.includes("[DONE]")) {
-                                sawDone = true;
-                            }
-                        }
                         res.write(Buffer.from(value));
-                        lastWriteAt = Date.now();
                     }
                 }
             } catch (streamErr) {
@@ -536,31 +473,8 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
                 }
                 throw streamErr;
             } finally {
-                if (heartbeat) {
-                    clearInterval(heartbeat);
-                }
-                try {
-                    await reader.cancel();
-                } catch (cancelError) {
-                    // The reader may already be released/errored; nothing to do.
-                }
                 reader.releaseLock();
             }
-
-            if (isEventStream && !sawDone && logger) {
-                logger.warn("Custom channel stream ended without [DONE]", {
-                    channel: targetChannel.name || targetChannel.id || "unknown",
-                    model: actualModel,
-                });
-            }
-
-            if (isEventStream && !sawDone && !isNativeClaude && !res.writableEnded) {
-                // Some OpenAI-compatible gateways close the stream without the
-                // terminating [DONE]; clients then treat the response as
-                // truncated, so add it ourselves.
-                res.write("data: [DONE]\n\n");
-            }
-
             res.end();
         } else {
             const rawText = await upstreamRes.text();
@@ -575,38 +489,21 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
             }
         }
     } catch (e) {
-        if (logger && !clientGone) {
+        if (logger && !abortController.signal.aborted) {
             logger.error("Custom channel proxy failed", {
                 channel: targetChannel.name || targetChannel.id || "unknown",
                 model: actualModel,
-                error: timedOut ? `upstream timeout after ${upstreamTimeoutMs}ms` : e.message,
+                error: e.message,
             });
         }
-
-        if (clientGone) {
-            if (!res.writableEnded) res.end();
-            return;
-        }
-
+        if (abortController.signal.aborted) return res.end();
         if (!res.headersSent) {
             const errJson = typeof buildErrorPayload === "function"
-                ? buildErrorPayload(
-                    502,
-                    timedOut
-                        ? `Channel proxy timed out after ${upstreamTimeoutMs}ms`
-                        : `Error proxying to channel: ${e.message}`,
-                    "server_error"
-                )
+                ? buildErrorPayload(502, `Error proxying to channel: ${e.message}`, "server_error")
                 : { error: { message: e.message }};
             res.status(502).json(errJson);
-        } else if (!res.writableEnded) {
-            // Mid-stream failure: close the response so the client does not
-            // hang forever on a truncated stream.
-            res.end();
         }
-    } finally {
-        clearTimeout(timeoutHandle);
     }
 }
 
-module.exports = { buildGptAllClient, buildFreeGptClient, clearResolutionCache, invalidateModelCaches, fetchAggregatedModels, proxyToCustomChannel, resolveTargetChannel, isBlacklisted, filterCachedModels };
+module.exports = { buildGptAllClient, buildFreeGptClient, clearResolutionCache, fetchAggregatedModels, proxyToCustomChannel, resolveTargetChannel, isBlacklisted, filterCachedModels };
