@@ -489,7 +489,27 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
             const isEventStream = String(ct || "").toLowerCase().includes("text/event-stream");
             let sawDone = false;
             let tail = "";
+            let lastWriteAt = Date.now();
             const reader = upstreamRes.body.getReader();
+
+            // Keep the connection alive through upstream silent gaps (long
+            // thinking phases) so a front proxy with a short idle timeout does
+            // not kill the stream mid-response.
+            const heartbeat = isEventStream
+                ? setInterval(() => {
+                    if (res.writableEnded || res.destroyed) {
+                        return;
+                    }
+                    if (Date.now() - lastWriteAt >= 2500) {
+                        res.write(": keep-alive\n\n");
+                        lastWriteAt = Date.now();
+                    }
+                }, 1000)
+                : null;
+            if (heartbeat && typeof heartbeat.unref === "function") {
+                heartbeat.unref();
+            }
+
             try {
                 while (true) {
                     const { done, value } = await reader.read();
@@ -503,6 +523,7 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
                             }
                         }
                         res.write(Buffer.from(value));
+                        lastWriteAt = Date.now();
                     }
                 }
             } catch (streamErr) {
@@ -515,12 +536,22 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
                 }
                 throw streamErr;
             } finally {
+                if (heartbeat) {
+                    clearInterval(heartbeat);
+                }
                 try {
                     await reader.cancel();
                 } catch (cancelError) {
                     // The reader may already be released/errored; nothing to do.
                 }
                 reader.releaseLock();
+            }
+
+            if (isEventStream && !sawDone && logger) {
+                logger.warn("Custom channel stream ended without [DONE]", {
+                    channel: targetChannel.name || targetChannel.id || "unknown",
+                    model: actualModel,
+                });
             }
 
             if (isEventStream && !sawDone && !isNativeClaude && !res.writableEnded) {

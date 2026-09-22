@@ -378,6 +378,40 @@ function wrapAnthropicStreamResponse(res) {
     let messageStopSent = false;
     let buf = "";
     let streamState = { inThink: false };
+
+    // Close any content block the upstream left open and emit the terminating
+    // message_delta/message_stop. Gateways that omit finish_reason or [DONE]
+    // would otherwise leave a tool_use block unclosed, which strict clients
+    // (Claude Code) treat as a truncated tool call.
+    const buildStreamTerminator = () => {
+        let out = "";
+
+        if (streamState.inThink) {
+            out += `event: content_block_delta\ndata: ${JSON.stringify({ type: "content_block_delta", index: streamState.currentIndex, delta: { type: "signature_delta", signature: "ai8_sign" } })}\n\n`;
+            out += `event: content_block_stop\ndata: ${JSON.stringify({ type: "content_block_stop", index: streamState.currentIndex })}\n\n`;
+            streamState.inThink = false;
+            streamState.currentIndex = (streamState.currentIndex || 0) + 1;
+        }
+
+        if (streamState.inTool) {
+            out += `event: content_block_stop\ndata: ${JSON.stringify({ type: "content_block_stop", index: streamState.currentIndex })}\n\n`;
+            streamState.inTool = false;
+            streamState.currentIndex = (streamState.currentIndex || 0) + 1;
+        } else if (streamState.hasStartedText) {
+            out += `event: content_block_stop\ndata: ${JSON.stringify({ type: "content_block_stop", index: streamState.currentIndex })}\n\n`;
+            streamState.hasStartedText = false;
+            streamState.currentIndex = (streamState.currentIndex || 0) + 1;
+        }
+
+        if (!streamState.finalStopReason) {
+            out += `event: message_delta\ndata: ${JSON.stringify({ type: "message_delta", delta: { stop_reason: "end_turn" }, usage: { output_tokens: 1 } })}\n\n`;
+            streamState.finalStopReason = "end_turn";
+        }
+
+        out += "event: message_stop\ndata: {\"type\": \"message_stop\"}\n\n";
+        return out;
+    };
+
     res.write = function(chunk) {
         if (res.statusCode !== 200) {
             return originalWrite(chunk);
@@ -399,7 +433,7 @@ function wrapAnthropicStreamResponse(res) {
                 const data = block.slice(6).trim();
                 if (data === "[DONE]") {
                     if (!messageStopSent) {
-                        anthropicStream += "event: message_stop\ndata: {\"type\": \"message_stop\"}\n\n";
+                        anthropicStream += buildStreamTerminator();
                         messageStopSent = true;
                     }
                     continue;
@@ -438,16 +472,16 @@ function wrapAnthropicStreamResponse(res) {
         }
         if (buf.trim().length > 0 && buf.includes("[DONE]")) {
             if (!messageStopSent) {
-                originalWrite("event: message_stop\ndata: {\"type\": \"message_stop\"}\n\n");
+                originalWrite(buildStreamTerminator());
                 messageStopSent = true;
             }
         }
 
-        // Guarantee exactly one message_stop even when the upstream closes the
-        // stream without sending [DONE]; strict clients (Claude Code / Vercel
-        // AI SDK) treat a missing message_stop as a truncated response.
+        // Guarantee a complete Anthropic stream even when the upstream closes
+        // without [DONE]; strict clients (Claude Code / Vercel AI SDK) treat a
+        // missing message_stop or an unclosed block as a truncated response.
         if (!messageStopSent && !isInitial) {
-            originalWrite("event: message_stop\ndata: {\"type\": \"message_stop\"}\n\n");
+            originalWrite(buildStreamTerminator());
             messageStopSent = true;
         }
 
