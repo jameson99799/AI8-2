@@ -184,49 +184,70 @@ function openAiToAnthropicChunk(openaiChunk, state = {}) {
             ? delta.reasoning_content
             : (typeof delta.reasoning === "string" && delta.reasoning ? delta.reasoning : "");
         if (reasoning) {
-            if (!state.inThink) {
-                state.inThink = true;
-                events.push({
-                    type: "content_block_start",
-                    index: state.currentIndex,
-                    content_block: { type: "thinking", signature: "ai8_internal", thinking: "" }
-                });
-            }
-            events.push({
-                type: "content_block_delta",
-                index: state.currentIndex,
-                delta: { type: "thinking_delta", thinking: reasoning }
-            });
-        }
-        
-        if (delta.content !== undefined && delta.content !== null && delta.content !== "") {
-            if (state.inThink) {
+            // While a tool_use block is open the current index belongs to that
+            // block; emitting thinking events here would overwrite it.
+            if (!state.inTool) {
+                if (!state.inThink) {
+                    state.inThink = true;
+                    events.push({
+                        type: "content_block_start",
+                        index: state.currentIndex,
+                        content_block: { type: "thinking", signature: "ai8_internal", thinking: "" }
+                    });
+                }
                 events.push({
                     type: "content_block_delta",
                     index: state.currentIndex,
-                    delta: { type: "signature_delta", signature: "ai8_sign" }
+                    delta: { type: "thinking_delta", thinking: reasoning }
                 });
-                events.push({ type: "content_block_stop", index: state.currentIndex });
-                state.inThink = false;
-                state.currentIndex++;
             }
-            if (!state.hasStartedText) {
-                state.hasStartedText = true;
+        }
+        
+        if (delta.content !== undefined && delta.content !== null && delta.content !== "") {
+            // Same as reasoning: never start a text block at the index of an
+            // open tool_use block.
+            if (!state.inTool) {
+                if (state.inThink) {
+                    events.push({
+                        type: "content_block_delta",
+                        index: state.currentIndex,
+                        delta: { type: "signature_delta", signature: "ai8_sign" }
+                    });
+                    events.push({ type: "content_block_stop", index: state.currentIndex });
+                    state.inThink = false;
+                    state.currentIndex++;
+                }
+                if (!state.hasStartedText) {
+                    state.hasStartedText = true;
+                    events.push({
+                        type: "content_block_start",
+                        index: state.currentIndex,
+                        content_block: { type: "text", text: "" }
+                    });
+                }
                 events.push({
-                    type: "content_block_start",
+                    type: "content_block_delta",
                     index: state.currentIndex,
-                    content_block: { type: "text", text: "" }
+                    delta: { type: "text_delta", text: delta.content }
                 });
             }
-            events.push({
-                type: "content_block_delta",
-                index: state.currentIndex,
-                delta: { type: "text_delta", text: delta.content }
-            });
         }
         if (delta.tool_calls && Array.isArray(delta.tool_calls)) {
             for (const tool_call of delta.tool_calls) {
-                if (state.activeToolIndex !== tool_call.index) {
+                const incomingId = typeof tool_call.id === "string" && tool_call.id ? tool_call.id : "";
+                // Gateways often omit `index` after the first delta, and some
+                // reuse the same index for a different call; treat a missing
+                // index as "same call" and a new id as "new call".
+                const incomingIndex = (tool_call.index === undefined || tool_call.index === null)
+                    ? state.activeToolIndex
+                    : tool_call.index;
+                // Never emit an input_json_delta without an open tool_use block:
+                // Claude Code throws "Content block not found" otherwise.
+                const startsNewBlock = !state.inTool
+                    || state.activeToolIndex !== incomingIndex
+                    || (incomingId !== "" && state.activeToolId !== incomingId);
+
+                if (startsNewBlock) {
                     if (state.inThink) {
                         events.push({
                             type: "content_block_delta",
@@ -249,10 +270,16 @@ function openAiToAnthropicChunk(openaiChunk, state = {}) {
                     events.push({
                         type: "content_block_start",
                         index: state.currentIndex,
-                        content_block: { type: "tool_use", id: tool_call.id || `call_${Date.now()}`, name: (tool_call.function && tool_call.function.name) || "unknown_tool", input: {} }
+                        content_block: {
+                            type: "tool_use",
+                            id: incomingId || `call_${Date.now()}_${state.currentIndex}`,
+                            name: (tool_call.function && tool_call.function.name) || "unknown_tool",
+                            input: {}
+                        }
                     });
                     state.inTool = true;
-                    state.activeToolIndex = tool_call.index;
+                    state.activeToolIndex = incomingIndex;
+                    state.activeToolId = incomingId || null;
                 }
                 if (tool_call.function && tool_call.function.arguments) {
                     events.push({
@@ -323,6 +350,8 @@ function openAiToAnthropicChunk(openaiChunk, state = {}) {
         if (state.inTool) {
             events.push({ type: "content_block_stop", index: state.currentIndex });
             state.inTool = false;
+            state.activeToolId = null;
+            state.activeToolIndex = undefined;
             state.currentIndex++;
         } else if (!state.hasStartedText) {
             events.push({

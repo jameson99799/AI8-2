@@ -263,3 +263,123 @@ test("estimateInputTokens includes tool definitions", () => {
     const withoutTools = estimateInputTokens({ messages: [{ role: "user", content: "hi" }] });
     assert.ok(withTools > withoutTools, "tools contribute to the estimate");
 });
+
+// --- Anthropic stream invariants -------------------------------------------
+// Claude Code (and the Vercel AI SDK) throw "Content block not found" when a
+// content_block_delta references an index with no open block of a matching
+// type. Every realistic upstream pattern must satisfy this invariant.
+function validateAnthropicStream(chunks, state = {}) {
+    const events = [];
+    for (const chunk of chunks) {
+        const out = openAiToAnthropicChunk(chunk, state);
+        const list = Array.isArray(out) ? out : (out ? [out] : []);
+        events.push(...list);
+    }
+
+    const open = new Map();
+    const expectedType = {
+        text_delta: "text",
+        thinking_delta: "thinking",
+        signature_delta: "thinking",
+        input_json_delta: "tool_use",
+    };
+
+    for (const event of events) {
+        if (event.type === "content_block_start") {
+            open.set(event.index, event.content_block.type);
+        } else if (event.type === "content_block_stop") {
+            assert.ok(open.has(event.index), `stop at ${event.index} without an open block`);
+            open.delete(event.index);
+        } else if (event.type === "content_block_delta") {
+            const type = open.get(event.index);
+            assert.ok(type, `delta ${event.delta.type} at index ${event.index} without a start`);
+            assert.equal(type, expectedType[event.delta.type], `delta ${event.delta.type} on a ${type} block`);
+        }
+    }
+
+    return { events, open };
+}
+
+const toolStart = (index, id, name, args = "") => ({
+    choices: [{ index: 0, delta: { tool_calls: [{ index, id, type: "function", function: { name, arguments: args } }] } }],
+});
+const toolArgs = (args, index) => ({
+    choices: [{
+        index: 0,
+        delta: {
+            tool_calls: [index === undefined
+                ? { function: { arguments: args } }
+                : { index, function: { arguments: args } }],
+        },
+    }],
+});
+const finish = () => ({ choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] });
+
+test("tool args keep one block when the gateway omits index/id after the first delta", () => {
+    const { events, open } = validateAnthropicStream([
+        toolStart(0, "call_a", "Bash"),
+        toolArgs('{"cmd":'),
+        toolArgs('"ls"}'),
+        finish(),
+    ]);
+
+    const starts = events.filter(e => e.type === "content_block_start");
+    assert.equal(starts.length, 1, "exactly one tool block");
+    assert.equal(starts[0].content_block.id, "call_a");
+    const argDeltas = events.filter(e => e.type === "content_block_delta" && e.delta.type === "input_json_delta");
+    assert.equal(argDeltas.length, 2, "both argument deltas kept on the same block");
+    assert.ok(argDeltas.every(d => d.index === starts[0].index), "all arguments on the tool block index");
+    assert.equal(open.size, 0, "all blocks closed by finish_reason");
+});
+
+test("a duplicate-index chunk with a different id opens a new tool block", () => {
+    const { events } = validateAnthropicStream([
+        toolStart(0, "call_a", "Bash"),
+        toolStart(0, "call_b", "Read", '{"p":1}'),
+        finish(),
+    ]);
+
+    const starts = events.filter(e => e.type === "content_block_start");
+    assert.equal(starts.length, 2, "second id starts a new block");
+    assert.deepEqual(starts.map(e => e.content_block.id), ["call_a", "call_b"]);
+});
+
+test("interleaved reasoning and text never corrupt an open tool block", () => {
+    const { events, open } = validateAnthropicStream([
+        toolStart(0, "call_a", "Bash"),
+        { choices: [{ index: 0, delta: { reasoning_content: "thinking" } }] },
+        { choices: [{ index: 0, delta: { content: "chatter" } }] },
+        toolArgs('{"cmd":"ls"}', 0),
+        finish(),
+    ]);
+
+    const toolBlock = events.find(e => e.type === "content_block_start" && e.content_block.type === "tool_use");
+    assert.ok(toolBlock, "tool block exists");
+    const argDeltas = events.filter(e => e.type === "content_block_delta" && e.delta.type === "input_json_delta");
+    assert.ok(argDeltas.every(d => d.index === toolBlock.index), "arguments stay on the tool block");
+    assert.equal(open.size, 0, "all blocks closed");
+});
+
+test("a tool delta arriving after finish_reason still gets a block start", () => {
+    const { events, open } = validateAnthropicStream([
+        toolStart(0, "call_a", "Bash"),
+        finish(),
+        toolArgs('{"late":true}', 0),
+    ]);
+
+    const late = events.filter(e => e.type === "content_block_delta" && e.delta.type === "input_json_delta");
+    assert.equal(late.length, 1, "late delta emitted");
+    const starts = events.filter(e => e.type === "content_block_start");
+    assert.ok(starts.some(s => s.index === late[0].index), "late delta has a matching start");
+    assert.equal(open.size, 1, "the late block stays open (no further finish)");
+});
+
+test("text then tool then trailing text stays well-formed", () => {
+    validateAnthropicStream([
+        { choices: [{ index: 0, delta: { content: "Let me check." } }] },
+        toolStart(0, "call_a", "Bash"),
+        toolArgs('{"cmd":"ls"}'),
+        finish(),
+        { choices: [{ index: 0, delta: { content: "Done." } }] },
+    ]);
+});
