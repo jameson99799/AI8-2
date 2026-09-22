@@ -134,6 +134,20 @@ test("thinking blocks become reasoning_content for DeepSeek-style pass-back", ()
     assert.equal(assistant.content, "Let me analyze.");
 });
 
+test("chunk converter never emits message_stop (the stream wrapper owns the terminator)", () => {
+    const converted = openAiToAnthropicChunk(
+        {
+            choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
+            model: "mock",
+        },
+        { inTool: true, currentIndex: 0 }
+    );
+
+    const events = Array.isArray(converted) ? converted : (converted ? [converted] : []);
+    assert.ok(events.some(event => event.type === "message_delta"), "message_delta is emitted");
+    assert.ok(!events.some(event => event.type === "message_stop"), "message_stop must not be emitted here");
+});
+
 test("plain string content and text-only array are unchanged", () => {
     const stringResult = anthropicToOpenAiRequest({
         model: "m",

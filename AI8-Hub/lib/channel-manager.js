@@ -485,13 +485,23 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
             if (typeof res.flushHeaders === "function") {
                 res.flushHeaders();
             }
-            
+
+            const isEventStream = String(ct || "").toLowerCase().includes("text/event-stream");
+            let sawDone = false;
+            let tail = "";
             const reader = upstreamRes.body.getReader();
             try {
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
                     if (value) {
+                        if (isEventStream && !sawDone) {
+                            // Track the tail so a split "[DONE]" is still detected.
+                            tail = (tail + Buffer.from(value).toString("utf8")).slice(-64);
+                            if (tail.includes("[DONE]")) {
+                                sawDone = true;
+                            }
+                        }
                         res.write(Buffer.from(value));
                     }
                 }
@@ -512,6 +522,14 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
                 }
                 reader.releaseLock();
             }
+
+            if (isEventStream && !sawDone && !isNativeClaude && !res.writableEnded) {
+                // Some OpenAI-compatible gateways close the stream without the
+                // terminating [DONE]; clients then treat the response as
+                // truncated, so add it ourselves.
+                res.write("data: [DONE]\n\n");
+            }
+
             res.end();
         } else {
             const rawText = await upstreamRes.text();

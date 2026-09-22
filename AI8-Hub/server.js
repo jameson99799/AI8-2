@@ -375,6 +375,7 @@ app.post("/v1/messages", asyncHandler(async (req, res) => {
 function wrapAnthropicStreamResponse(res) {
     const originalWrite = res.write.bind(res);
     let isInitial = true;
+    let messageStopSent = false;
     let buf = "";
     let streamState = { inThink: false };
     res.write = function(chunk) {
@@ -397,7 +398,10 @@ function wrapAnthropicStreamResponse(res) {
             if (block.startsWith("data: ")) {
                 const data = block.slice(6).trim();
                 if (data === "[DONE]") {
-                    anthropicStream += "event: message_stop\ndata: {\"type\": \"message_stop\"}\n\n";
+                    if (!messageStopSent) {
+                        anthropicStream += "event: message_stop\ndata: {\"type\": \"message_stop\"}\n\n";
+                        messageStopSent = true;
+                    }
                     continue;
                 }
                 try {
@@ -433,8 +437,20 @@ function wrapAnthropicStreamResponse(res) {
             buf += chunkStr;
         }
         if (buf.trim().length > 0 && buf.includes("[DONE]")) {
-            originalWrite("event: message_stop\ndata: {\"type\": \"message_stop\"}\n\n");
+            if (!messageStopSent) {
+                originalWrite("event: message_stop\ndata: {\"type\": \"message_stop\"}\n\n");
+                messageStopSent = true;
+            }
         }
+
+        // Guarantee exactly one message_stop even when the upstream closes the
+        // stream without sending [DONE]; strict clients (Claude Code / Vercel
+        // AI SDK) treat a missing message_stop as a truncated response.
+        if (!messageStopSent && !isInitial) {
+            originalWrite("event: message_stop\ndata: {\"type\": \"message_stop\"}\n\n");
+            messageStopSent = true;
+        }
+
         originalEnd(chunk, encoding, callback);
     };
 }
