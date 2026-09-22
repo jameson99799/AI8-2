@@ -44,6 +44,16 @@ function clearResolutionCache() {
     resolutionCache = new Map();
 }
 
+/**
+ * Expire the aggregated model cache and drop cached routing decisions so a
+ * config change (new/disabled channel, rotated key) takes effect on the next
+ * request instead of up to 5 minutes later.
+ */
+function invalidateModelCaches() {
+    modelCache.timestamp = 0;
+    clearResolutionCache();
+}
+
 async function fetchAggregatedModels(client, config, forceRefresh, logger, forAdmin = false) {
     if (!forceRefresh && modelCache.models.length > 0 && Date.now() - modelCache.timestamp < modelCache.ttl) {
         return filterCachedModels(modelCache.models, config, forAdmin);
@@ -97,7 +107,7 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
     }
 
     const customChannelTasks = (config.customChannels || [])
-        .filter(channel => channel.enabled)
+        .filter(channel => channel.enabled && channel.baseUrl)
         .map(channel => {
             let safeBase = channel.baseUrl.trim().replace(/\/+$/, "");
             if (safeBase.endsWith("/chat/completions")) {
@@ -318,7 +328,7 @@ async function resolveTargetChannelUncached(requestModel, config, client, logger
         actualModel = match[1];
         const channelName = match[2];
         const customChannels = config.customChannels || [];
-        targetChannel = customChannels.find(c => c.name === channelName && c.enabled);
+        targetChannel = customChannels.find(c => c.name === channelName && c.enabled && c.baseUrl);
         if (targetChannel) {
             return { targetChannel, actualModel, toolSupported: null };
         }
@@ -359,7 +369,7 @@ async function resolveTargetChannelUncached(requestModel, config, client, logger
             actualModel = cached._actualModel || requestModel;
         } else if (cached && cached._source !== "ai8") {
             const customChannels = config.customChannels || [];
-            targetChannel = customChannels.find(c => c.name === cached._source && c.enabled);
+            targetChannel = customChannels.find(c => c.name === cached._source && c.enabled && c.baseUrl);
             if (targetChannel) {
                 actualModel = cached._actualModel || requestModel;
             }
@@ -408,15 +418,37 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
     }
     
     const abortController = new AbortController();
-    req.on("close", () => abortController.abort());
+    let clientGone = false;
+    let timedOut = false;
+    res.on("close", () => {
+        if (!res.writableFinished) {
+            clientGone = true;
+            abortController.abort();
+        }
+    });
+
+    const upstreamTimeoutMs = Number(targetChannel.requestTimeoutMs) > 0
+        ? Number(targetChannel.requestTimeoutMs)
+        : 300000;
+    const timeoutHandle = setTimeout(() => {
+        timedOut = true;
+        abortController.abort();
+    }, upstreamTimeoutMs);
+    if (typeof timeoutHandle.unref === "function") {
+        timeoutHandle.unref();
+    }
 
     try {
         const reqHeaders = {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${targetChannel.apiKey}`
         };
+        if (targetChannel.apiKey) {
+            reqHeaders["Authorization"] = `Bearer ${targetChannel.apiKey}`;
+            if (isNativeClaude) {
+                reqHeaders["x-api-key"] = targetChannel.apiKey;
+            }
+        }
         if (isNativeClaude) {
-            reqHeaders["x-api-key"] = targetChannel.apiKey;
             reqHeaders["anthropic-version"] = req.headers["anthropic-version"] || "2023-06-01";
             if (req.headers["anthropic-beta"]) {
                 reqHeaders["anthropic-beta"] = req.headers["anthropic-beta"];
@@ -473,6 +505,11 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
                 }
                 throw streamErr;
             } finally {
+                try {
+                    await reader.cancel();
+                } catch (cancelError) {
+                    // The reader may already be released/errored; nothing to do.
+                }
                 reader.releaseLock();
             }
             res.end();
@@ -489,21 +526,38 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
             }
         }
     } catch (e) {
-        if (logger && !abortController.signal.aborted) {
+        if (logger && !clientGone) {
             logger.error("Custom channel proxy failed", {
                 channel: targetChannel.name || targetChannel.id || "unknown",
                 model: actualModel,
-                error: e.message,
+                error: timedOut ? `upstream timeout after ${upstreamTimeoutMs}ms` : e.message,
             });
         }
-        if (abortController.signal.aborted) return res.end();
+
+        if (clientGone) {
+            if (!res.writableEnded) res.end();
+            return;
+        }
+
         if (!res.headersSent) {
             const errJson = typeof buildErrorPayload === "function"
-                ? buildErrorPayload(502, `Error proxying to channel: ${e.message}`, "server_error")
+                ? buildErrorPayload(
+                    502,
+                    timedOut
+                        ? `Channel proxy timed out after ${upstreamTimeoutMs}ms`
+                        : `Error proxying to channel: ${e.message}`,
+                    "server_error"
+                )
                 : { error: { message: e.message }};
             res.status(502).json(errJson);
+        } else if (!res.writableEnded) {
+            // Mid-stream failure: close the response so the client does not
+            // hang forever on a truncated stream.
+            res.end();
         }
+    } finally {
+        clearTimeout(timeoutHandle);
     }
 }
 
-module.exports = { buildGptAllClient, buildFreeGptClient, clearResolutionCache, fetchAggregatedModels, proxyToCustomChannel, resolveTargetChannel, isBlacklisted, filterCachedModels };
+module.exports = { buildGptAllClient, buildFreeGptClient, clearResolutionCache, invalidateModelCaches, fetchAggregatedModels, proxyToCustomChannel, resolveTargetChannel, isBlacklisted, filterCachedModels };

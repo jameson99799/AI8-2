@@ -28,7 +28,11 @@ if not exist "node_modules" (
 )
 
 echo [AI8] 3 秒后自动打开后台页面...
-start "" "http://127.0.0.1:7862/admin"
+set "AI8_PORT=7862"
+for /f "usebackq tokens=1,* delims==" %%a in (".env") do (
+    if /i "%%a"=="PORT" set "AI8_PORT=%%b"
+)
+start "" "http://127.0.0.1:%AI8_PORT%/admin"
 timeout /t 3 /nobreak >nul
 
 echo [AI8] 正在启动服务...

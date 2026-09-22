@@ -42,6 +42,7 @@ const elements = {
     gptallFingerprint: document.getElementById("gptallFingerprint"),
     gptallDefaultModel: document.getElementById("gptallDefaultModel"),
     gptallAllowedModels: document.getElementById("gptallAllowedModels"),
+    gptallBlacklistedModels: document.getElementById("gptallBlacklistedModels"),
     gptallRequestTimeoutMs: document.getElementById("gptallRequestTimeoutMs"),
     freegptEnabled: document.getElementById("freegptEnabled"),
     freegptUuid: document.getElementById("freegptUuid"),
@@ -271,7 +272,6 @@ async function saveGlobalConfig() {
         const originalText = elements.saveConfigButton.textContent;
         elements.saveConfigButton.textContent = "保存中...";
         const payload = {
-            adminToken: elements.adminTokenConfig.value.trim(),
             ai8AuthToken: elements.ai8AuthToken.value.trim(),
             ai8BaseUrl: elements.ai8BaseUrl.value.trim(),
             ai8DefaultModel: elements.ai8DefaultModel.value.trim(),
@@ -285,6 +285,7 @@ async function saveGlobalConfig() {
             gptallFingerprint: elements.gptallFingerprint.value.trim(),
             gptallDefaultModel: elements.gptallDefaultModel.value.trim(),
             gptallAllowedModels: elements.gptallAllowedModels.value.trim(),
+            gptallBlacklistedModels: elements.gptallBlacklistedModels.value.trim(),
             gptallRequestTimeoutMs: toNumberString(elements.gptallRequestTimeoutMs.value),
             freegptEnabled: elements.freegptEnabled.value === "true",
             freegptUuid: elements.freegptUuid.value.trim(),
@@ -295,6 +296,13 @@ async function saveGlobalConfig() {
             freegptBlacklistedModels: elements.freegptBlacklistedModels.value.trim(),
             freegptRequestTimeoutMs: toNumberString(elements.freegptRequestTimeoutMs.value),
         };
+
+        // Only rotate the admin token when a new value was actually entered;
+        // an empty field must not wipe the current token (lock-out).
+        const nextAdminToken = elements.adminTokenConfig.value.trim();
+        if (nextAdminToken) {
+            payload.adminToken = nextAdminToken;
+        }
 
         const response = await requestJson("/admin/api/config", {
             body: JSON.stringify(payload),
@@ -455,8 +463,9 @@ async function saveChannel() {
     
     let updated = [...state.channels];
     if (id !== "" && id >= 0) {
-        newChannel.enabled = updated[id].enabled;
-        updated[id] = newChannel;
+        // Merge into the existing entry so models / blacklistedModels /
+        // stripReasoning and other flags are preserved when editing.
+        updated[id] = { ...updated[id], ...newChannel, enabled: updated[id].enabled };
     } else {
         updated.push(newChannel);
     }
@@ -775,8 +784,16 @@ function renderChannelModelChecklist() {
                 <input type="checkbox" class="channel-model-checkbox" value="${escapeHtml(v)}" ${isChecked}>
                 <span style="font-weight: 500;">${escapeHtml(v)}</span>
             </div>
-            <button type="button" class="ghost-button" onclick="event.preventDefault(); openTestModal('${escapeHtml(m.display_value || m.value)}')">🧪测试</button>
+            <button type="button" class="ghost-button js-test-model">🧪测试</button>
         `;
+        const testButton = row.querySelector(".js-test-model");
+        if (testButton) {
+            const testModelName = m.display_value || m.value;
+            testButton.addEventListener("click", event => {
+                event.preventDefault();
+                window.openTestModal(testModelName);
+            });
+        }
         clist.appendChild(row);
     });
     filterChannelModels();
@@ -848,8 +865,8 @@ document.getElementById('btnSaveChannelModels').addEventListener('click', async 
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(mode === 'blacklist'
-                    ? { ai8BlacklistedModels: selectedModels.join(",") }
-                    : { ai8AllowedModels: selectedModels.join(",") })
+                    ? { ai8BlacklistedModels: selectedModels.join(","), ai8AllowedModels: "" }
+                    : { ai8AllowedModels: selectedModels.join(","), ai8BlacklistedModels: "" })
             });
             state.config = response.config || state.config;
         } else if (sourceId === 'gptall') {
@@ -857,13 +874,19 @@ document.getElementById('btnSaveChannelModels').addEventListener('click', async 
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(mode === 'blacklist'
-                    ? { gptallBlacklistedModels: selectedModels.join(",") }
-                    : { gptallAllowedModels: selectedModels.join(",") })
+                    ? { gptallBlacklistedModels: selectedModels.join(","), gptallAllowedModels: "" }
+                    : { gptallAllowedModels: selectedModels.join(","), gptallBlacklistedModels: "" })
             });
             state.config = response.config || state.config;
         } else {
             let updated = [...state.channels];
-            updated[sourceId][mode === 'blacklist' ? 'blacklistedModels' : 'models'] = selectedModels;
+            // Only one list can be active: clear the opposite one so a stale
+            // whitelist/blacklist cannot keep filtering models silently.
+            updated[sourceId] = {
+                ...updated[sourceId],
+                models: mode === 'blacklist' ? [] : selectedModels,
+                blacklistedModels: mode === 'blacklist' ? selectedModels : []
+            };
             
             await requestJson("/admin/api/channels", {
                 method: "PUT",
@@ -873,9 +896,9 @@ document.getElementById('btnSaveChannelModels').addEventListener('click', async 
             state.channels = updated;
         }
         
-        if (mode === 'blacklist') {
-            await syncChannelBlacklistToGlobal(sourceId, isGptAll, selectedModels);
-        }
+        // Re-sync the global blacklist in both modes: blacklist mode adds the
+        // selection, whitelist mode removes this channel's stale entries.
+        await syncChannelBlacklistToGlobal(sourceId, isGptAll, mode === 'blacklist' ? selectedModels : []);
         
         btn.textContent = "同步完成！";
         setTimeout(() => {
@@ -945,7 +968,10 @@ async function runModelTest() {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${state.adminToken}`
             },
-            body: JSON.stringify(aiRequest)
+            body: JSON.stringify(aiRequest),
+            signal: (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function")
+                ? AbortSignal.timeout(300000)
+                : undefined
         });
         
         const rawText = await response.text();
@@ -1019,6 +1045,7 @@ function renderConfig(config) {
     if (elements.gptallFingerprint) elements.gptallFingerprint.value = config.gptallFingerprint || "";
     if (elements.gptallDefaultModel) elements.gptallDefaultModel.value = config.gptallDefaultModel || "";
     if (elements.gptallAllowedModels) elements.gptallAllowedModels.value = config.gptallAllowedModels || "";
+    if (elements.gptallBlacklistedModels) elements.gptallBlacklistedModels.value = config.gptallBlacklistedModels || "";
     if (elements.gptallRequestTimeoutMs) elements.gptallRequestTimeoutMs.value = config.gptallRequestTimeoutMs || "";
     if (elements.freegptEnabled) elements.freegptEnabled.value = config.freegptEnabled === true ? "true" : "false";
     if (elements.freegptUuid) elements.freegptUuid.value = config.freegptUuid || "";
@@ -1047,7 +1074,18 @@ async function requestJson(url, options = {}) {
         ...(options.headers || {}),
         Authorization: `Bearer ${state.adminToken}`,
     };
-    const response = await fetch(url, { ...options, headers });
+    const timeoutSignal = (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function")
+        ? AbortSignal.timeout(options.timeoutMs || 20000)
+        : undefined;
+    let response;
+    try {
+        response = await fetch(url, { ...options, headers, signal: options.signal || timeoutSignal });
+    } catch (error) {
+        if (error && error.name === "AbortError") {
+            throw new Error("请求超时或已被中断，请检查服务器状态后重试");
+        }
+        throw error;
+    }
     const payload = await response.json().catch(() => null);
 
     if (!response.ok) {

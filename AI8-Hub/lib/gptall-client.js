@@ -111,11 +111,9 @@ class GptAllClient {
     async streamChatCompletion(options = {}, handlers = {}) {
         const model = await this.resolveModel(options.model);
         const groupId = await this._createGroup();
-        let groupUpdated = false;
 
         try {
             await this._updateGroupModel(groupId, model);
-            groupUpdated = true;
 
             const payload = {
                 model: model.value,
@@ -252,8 +250,12 @@ class GptAllClient {
                 record,
             };
         } finally {
-            if (groupUpdated && this.deleteGroupAfterResponse) {
-                this._deleteGroup(groupId).catch(() => {});
+            if (this.deleteGroupAfterResponse) {
+                // Delete whenever the group was created — even if the model
+                // update failed — so no orphaned groups accumulate upstream.
+                this._deleteGroup(groupId).catch(error => {
+                    console.warn(`[gpt-all] Failed to delete group ${groupId}: ${error?.message || error}`);
+                });
             }
         }
     }

@@ -15,10 +15,12 @@ const RuntimeConfigStore = require("./lib/runtime-config");
 const RuntimeLogger = require("./lib/runtime-logger");
 const { resolveSessionPrompt } = require("./lib/request-prompt");
 const {
+    assertSafeRemoteUrl,
     contentPartToAi8File,
     extractAi8Images,
     isProbablyImageFile,
     normalizeAi8FileInput,
+    readBodyWithLimit,
 } = require("./lib/media-utils");
 const {
     buildAdminModelsList,
@@ -37,7 +39,7 @@ const {
     openAiToAnthropicChunk,
     openAiToAnthropicResponse,
 } = require("./lib/anthropic-format");
-const { buildFreeGptClient, buildGptAllClient, fetchAggregatedModels, proxyToCustomChannel, resolveTargetChannel, isBlacklisted } = require("./lib/channel-manager");
+const { buildFreeGptClient, buildGptAllClient, fetchAggregatedModels, invalidateModelCaches, proxyToCustomChannel, resolveTargetChannel, isBlacklisted } = require("./lib/channel-manager");
 const toolMarker = require("./lib/tool-marker");
 const { initHttpPool } = require("./lib/http-pool");
 
@@ -136,6 +138,7 @@ app.put("/admin/api/config", requireAdminAuth, (req, res) => {
     const nextConfig = configStore.updateConfig(patch);
 
     invalidateClient();
+    invalidateModelCaches();
     setImmediate(prewarmCaches);
     announceAdminAccess("config_update");
 
@@ -167,6 +170,9 @@ app.put("/admin/api/channels", requireAdminAuth, (req, res) => {
     const channels = req.body;
     if (Array.isArray(channels)) {
         configStore.updateConfig({ customChannels: channels });
+        invalidateClient();
+        invalidateModelCaches();
+        setImmediate(prewarmCaches);
     }
     res.json({ ok: true, data: getConfig().customChannels });
 });
@@ -188,6 +194,9 @@ app.post("/admin/api/import", requireAdminAuth, (req, res) => {
     const parsed = req.body;
     if (typeof parsed === "object") {
         configStore.updateConfig(parsed); 
+        invalidateClient();
+        invalidateModelCaches();
+        setImmediate(prewarmCaches);
         res.json({ ok: true, message: "Import success" });
     } else {
         res.status(400).json({ ok: false, message: "Invalid payload" });
@@ -345,6 +354,11 @@ app.post("/v1/messages", asyncHandler(async (req, res) => {
     if (!openaiBody.stream) {
         const originalJson = res.json.bind(res);
         res.json = function(data) {
+            // Error payloads must pass through untouched, otherwise the real
+            // error message is replaced by a fake assistant message.
+            if (res.statusCode >= 400) {
+                return originalJson(data);
+            }
             return originalJson(openAiToAnthropicResponse(data));
         };
     } else {
@@ -374,6 +388,12 @@ function wrapAnthropicStreamResponse(res) {
         
         let anthropicStream = "";
         for (const block of lines) {
+            if (block.startsWith(":")) {
+                // Forward SSE comments (keep-alive heartbeat) so front proxies
+                // do not kill the stream during long silent thinking phases.
+                anthropicStream += `${block}\n\n`;
+                continue;
+            }
             if (block.startsWith("data: ")) {
                 const data = block.slice(6).trim();
                 if (data === "[DONE]") {
@@ -523,10 +543,17 @@ async function handleChatCompletion(req, res, body) {
         temperature: body.temperature,
     });
 
-    if (sessionPrompt.value) {
-        session = await client.updateSession(session, {
-            prompt: sessionPrompt.value,
-        });
+    try {
+        if (sessionPrompt.value) {
+            session = await client.updateSession(session, {
+                prompt: sessionPrompt.value,
+            });
+        }
+    } catch (error) {
+        // The session was already created upstream; delete it so a failed
+        // update does not leak an orphaned AI8 session.
+        scheduleSessionDeletion(client, session.id, "session_update_failed");
+        throw error;
     }
 
     res.setHeader("x-ai8-session-id", String(session.id));
@@ -534,7 +561,7 @@ async function handleChatCompletion(req, res, body) {
     res.setHeader("x-ai8-session-prompt-present", sessionPrompt.value ? "true" : "false");
 
     const abortController = new AbortController();
-    req.on("close", () => abortController.abort());
+    res.on("close", () => { if (!res.writableFinished) abortController.abort(); });
 
     let content = "";
     let finalRecord = null;
@@ -679,7 +706,7 @@ async function handleAi8DrawGeneration(req, res, body, config, client, drawModel
     const quality = ["high", "medium", "low", "auto"].includes(qualityInput) ? qualityInput : "high";
 
     let clientAborted = false;
-    req.on("close", () => { clientAborted = true; });
+    res.on("close", () => { if (!res.writableFinished) clientAborted = true; });
 
     const urls = await runAi8DrawTask(client, {
         drawModel,
@@ -710,7 +737,7 @@ async function handleAi8DrawEdit(req, res, body, drawImages, config, client, dra
     const quality = ["high", "medium", "low", "auto"].includes(qualityInput) ? qualityInput : "high";
 
     let clientAborted = false;
-    req.on("close", () => { clientAborted = true; });
+    res.on("close", () => { if (!res.writableFinished) clientAborted = true; });
 
     const editImages = drawImages.filter(Boolean).slice(0, 3);
     logger.info("AI8 draw edit received", {
@@ -817,7 +844,7 @@ async function handleAi8DrawChatCompletion(req, res, body, config, client, drawM
     }
 
     let clientAborted = false;
-    req.on("close", () => { clientAborted = true; });
+    res.on("close", () => { if (!res.writableFinished) clientAborted = true; });
 
     const urls = await runAi8DrawTask(client, {
         drawModel,
@@ -912,7 +939,7 @@ app.post("/v1/images/generations", asyncHandler(async (req, res) => {
     }
 
     const abortController = new AbortController();
-    req.on("close", () => abortController.abort());
+    res.on("close", () => { if (!res.writableFinished) abortController.abort(); });
 
     let content = "";
     let finalRecord = null;
@@ -964,17 +991,20 @@ app.post("/v1/images/edits", asyncHandler(async (req, res) => {
         const parts = await simpleMultipartParser(req);
         body = parts.fields;
 
-        for (const [fieldName, filePart] of Object.entries(parts.files)) {
-            if (!filePart) continue;
-            const normalized = await normalizeAi8FileInput({
-                data: filePart.data.toString("base64"),
-                mimeType: filePart.mimeType,
-                name: filePart.filename,
-                prefix: fieldName
-            });
-            files.push(normalized);
-            if (!/^mask(\[\])?$/i.test(fieldName)) {
-                drawImages.push(normalized.data);
+        for (const [fieldName, fileParts] of Object.entries(parts.files)) {
+            const list = Array.isArray(fileParts) ? fileParts : (fileParts ? [fileParts] : []);
+            for (const filePart of list) {
+                if (!filePart) continue;
+                const normalized = await normalizeAi8FileInput({
+                    data: filePart.data.toString("base64"),
+                    mimeType: filePart.mimeType,
+                    name: filePart.filename,
+                    prefix: fieldName
+                });
+                files.push(normalized);
+                if (!/^mask(\[\])?$/i.test(fieldName)) {
+                    drawImages.push(normalized.data);
+                }
             }
         }
     } else {
@@ -1027,7 +1057,7 @@ app.post("/v1/images/edits", asyncHandler(async (req, res) => {
     });
 
     const abortController = new AbortController();
-    req.on("close", () => abortController.abort());
+    res.on("close", () => { if (!res.writableFinished) abortController.abort(); });
 
     let content = "";
     let finalRecord = null;
@@ -1108,12 +1138,21 @@ app.listen(port, "0.0.0.0", () => {
         bind: `0.0.0.0:${port}`,
         port,
     });
+
+    const startupConfig = getConfig();
+    if (!Array.isArray(startupConfig.apiKeys) || startupConfig.apiKeys.length === 0) {
+        logger.warn("Local API is reachable without authentication because API_KEYS is empty", {
+            bind: `0.0.0.0:${port}`,
+            hint: "Set API_KEYS in the admin console or .env, or bind the port to a private network.",
+        });
+    }
+
     prewarmCaches();
 });
 
 async function handleStreamingChatCompletion(req, res, options) {
     const abortController = new AbortController();
-    req.on("close", () => abortController.abort());
+    res.on("close", () => { if (!res.writableFinished) abortController.abort(); });
 
     const {
         client,
@@ -1198,8 +1237,15 @@ async function handleStreamingChatCompletion(req, res, options) {
     } catch (error) {
         clearInterval(heartbeat);
         if (abortController.signal.aborted) {
+            if (sessionId !== null) {
+                scheduleSessionDeletion(client, sessionId, "stream_abort");
+            }
             res.end();
             return;
+        }
+        if (sessionId !== null) {
+            // Session was created but its setup failed: delete the orphan.
+            scheduleSessionDeletion(client, sessionId, "session_setup_failed");
         }
         logger.warn("AI8 stream session creation failed", {
             error: error?.message || String(error),
@@ -1436,7 +1482,7 @@ async function handleFreeGptChatCompletion(req, res, model, body, config) {
 
     if (body.stream) {
         const abortController = new AbortController();
-        req.on("close", () => abortController.abort());
+        res.on("close", () => { if (!res.writableFinished) abortController.abort(); });
 
         let streamedContent = "";
 
@@ -1497,6 +1543,7 @@ async function handleFreeGptChatCompletion(req, res, model, body, config) {
                 error: error.message,
             });
             res.write(buildSseErrorEvent(error, requestModel));
+            res.write("data: [DONE]\n\n");
             res.end();
             return;
         }
@@ -1504,6 +1551,7 @@ async function handleFreeGptChatCompletion(req, res, model, body, config) {
         if (!streamedContent) {
             logger.warn("freegpt returned an empty response", { model: actualModel });
             res.write(buildSseErrorEvent(new Error("freegpt returned an empty response."), requestModel));
+            res.write("data: [DONE]\n\n");
             res.end();
             return;
         }
@@ -1539,7 +1587,7 @@ async function handleFreeGptChatCompletion(req, res, model, body, config) {
     }
 
     const abortController = new AbortController();
-    req.on("close", () => abortController.abort());
+    res.on("close", () => { if (!res.writableFinished) abortController.abort(); });
 
     let streamResult;
     try {
@@ -1620,7 +1668,7 @@ async function handleGptAllChatCompletion(req, res, model, body, config, resolve
 
     if (body.stream) {
         const abortController = new AbortController();
-        req.on("close", () => abortController.abort());
+        res.on("close", () => { if (!res.writableFinished) abortController.abort(); });
 
         let finalRecord = null;
         let streamedContent = "";
@@ -1693,6 +1741,7 @@ async function handleGptAllChatCompletion(req, res, model, body, config, resolve
                 return;
             }
             res.write(buildSseErrorEvent(error, requestModel));
+            res.write("data: [DONE]\n\n");
             res.end();
             return;
         }
@@ -1700,6 +1749,7 @@ async function handleGptAllChatCompletion(req, res, model, body, config, resolve
         const failureInfo = gptAllFailureInfo(finalRecord);
         if (failureInfo) {
             res.write(buildSseErrorEvent(new Error(failureInfo.message), requestModel));
+            res.write("data: [DONE]\n\n");
             res.end();
             return;
         }
@@ -1707,6 +1757,7 @@ async function handleGptAllChatCompletion(req, res, model, body, config, resolve
         let finalContent = resolveFinalContent(finalRecord, streamedContent);
         if (!finalContent && !finalRecord) {
             res.write(buildSseErrorEvent(new Error("gpt-all returned an empty response."), requestModel));
+            res.write("data: [DONE]\n\n");
             res.end();
             return;
         }
@@ -1791,7 +1842,7 @@ async function handleGptAllChatCompletion(req, res, model, body, config, resolve
     }
 
     const abortController = new AbortController();
-    req.on("close", () => abortController.abort());
+    res.on("close", () => { if (!res.writableFinished) abortController.abort(); });
 
     let content = "";
     let finalRecord = null;
@@ -2072,11 +2123,26 @@ function requestLoggerMiddleware(req, res, next) {
             duration_ms: durationMs,
             ip: extractRequestIp(req),
             method: req.method,
-            path: req.originalUrl,
+            path: redactSecretQuery(req.originalUrl),
             status: res.statusCode,
         });
     });
     next();
+}
+
+/**
+ * Strip token/key values from a request URL before it is written to the log.
+ */
+function redactSecretQuery(originalUrl) {
+    const text = String(originalUrl || "");
+    if (!text.includes("?")) {
+        return text;
+    }
+
+    return text.replace(
+        /([?&](?:token|admin_token|key|api_key)=)[^&#]*/gi,
+        "$1***"
+    );
 }
 
 function buildRuntimeSnapshot(req) {
@@ -2342,6 +2408,12 @@ function requireLocalApiAuth(req, res, next) {
 
     const candidate = extractLocalApiToken(req);
     if (candidate && apiKeys.includes(candidate)) {
+        return next();
+    }
+
+    // The admin console reuses its own token to run model tests against /v1;
+    // admin tokens are at least as privileged as local API keys.
+    if (candidate && configStore.getAdminTokens().includes(candidate)) {
         return next();
     }
 
@@ -2687,9 +2759,30 @@ async function simpleMultipartParser(req) {
         
         const boundary = "--" + (boundaryMatch[1] || boundaryMatch[2]);
         const chunks = [];
+        const maxBytes = parseByteSize(getConfig().requestBodyLimit, 50 * 1024 * 1024);
+        let receivedBytes = 0;
+        let rejectedForSize = false;
         
-        req.on("data", chunk => chunks.push(chunk));
+        req.on("data", chunk => {
+            if (rejectedForSize) {
+                return;
+            }
+
+            receivedBytes += chunk.length;
+            if (receivedBytes > maxBytes) {
+                rejectedForSize = true;
+                chunks.length = 0;
+                reject(createHttpError(413, `Multipart body exceeded REQUEST_BODY_LIMIT (${getConfig().requestBodyLimit}).`));
+                return;
+            }
+
+            chunks.push(chunk);
+        });
         req.on("end", () => {
+            if (rejectedForSize) {
+                return;
+            }
+
             try {
                 const buffer = Buffer.concat(chunks);
                 const parts = { fields: {}, files: {} };
@@ -2730,11 +2823,16 @@ async function simpleMultipartParser(req) {
                     if (nameMatch) {
                         const name = nameMatch[1];
                         if (filenameMatch) {
-                            parts.files[name] = {
+                            // Keep every file for the same field name instead of
+                            // silently overwriting earlier ones.
+                            if (!Array.isArray(parts.files[name])) {
+                                parts.files[name] = [];
+                            }
+                            parts.files[name].push({
                                 data: content,
                                 filename: filenameMatch[1],
                                 mimeType: typeMatch ? typeMatch[1].trim() : "application/octet-stream"
-                            };
+                            });
                             logger.info("Parsed file part", { name, filename: filenameMatch[1], size: content.length });
                         } else {
                             parts.fields[name] = content.toString("utf8").trim();
@@ -2755,6 +2853,19 @@ async function simpleMultipartParser(req) {
     });
 }
 
+function parseByteSize(value, fallback) {
+    const match = /^\s*(\d+(?:\.\d+)?)\s*(b|kb|mb|gb)?\s*$/i.exec(String(value || ""));
+    if (!match) {
+        return fallback;
+    }
+
+    const amount = Number(match[1]);
+    const unit = (match[2] || "b").toLowerCase();
+    const factor = unit === "gb" ? 1024 * 1024 * 1024 : unit === "mb" ? 1024 * 1024 : unit === "kb" ? 1024 : 1;
+    const bytes = Math.floor(amount * factor);
+    return Number.isFinite(bytes) && bytes > 0 ? bytes : fallback;
+}
+
 /**
  * Ensure image endpoints always provide a base64 version if clients require it.
  */
@@ -2765,9 +2876,12 @@ async function resolveImagesToBase64(images, options = {}) {
             const abortController = new AbortController();
             const timeout = setTimeout(() => abortController.abort(), timeoutMs);
             try {
-                const response = await fetch(img.url, { signal: abortController.signal });
+                // Model output may contain arbitrary URLs; never fetch internal
+                // addresses and cap the size that is read into memory.
+                await assertSafeRemoteUrl(img.url);
+                const response = await fetch(img.url, { signal: abortController.signal, redirect: "manual" });
                 if (response.ok) {
-                    const buffer = Buffer.from(await response.arrayBuffer());
+                    const buffer = await readBodyWithLimit(response, 32 * 1024 * 1024);
                     const b64 = buffer.toString("base64");
                     const mime = response.headers.get("content-type") || "image/png";
                     return {
