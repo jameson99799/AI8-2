@@ -31,16 +31,33 @@ function toDisplayModelId(value) {
     return parts[parts.length - 1] || text;
 }
 
+// lsshirtai exposes provider-qualified ids such as
+// `google::gemini-3.7-flash`. Stripping the prefix can collide when two
+// providers publish the same short model name, so keep the full id for that
+// channel while leaving the existing AI8/custom display behavior untouched.
+function toChannelModelId(model, value) {
+    const text = String(value || "").trim();
+    if (!text) {
+        return text;
+    }
+
+    if (model?._source === "lsshirtai") {
+        return text;
+    }
+
+    return toDisplayModelId(text);
+}
+
 function buildModelsList(models) {
     const created = Math.floor(Date.now() / 1000);
 
     return {
         data: models.map(model => ({
             created,
-            id: toDisplayModelId(model.value),
+            id: toChannelModelId(model, model.value),
             object: "model",
             owned_by: model?.attr?.providerName || "ai8",
-            name: toDisplayModelId(model.label || model.value),
+            name: toChannelModelId(model, model.label || model.value),
         })),
         object: "list",
     };
@@ -49,7 +66,7 @@ function buildModelsList(models) {
 function buildAdminModelsList(models) {
     return models.map(model => ({
         ...model,
-        display_value: toDisplayModelId(model?.value || ""),
+        display_value: toChannelModelId(model, model?.value || ""),
     }));
 }
 

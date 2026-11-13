@@ -51,6 +51,15 @@ const elements = {
     freegptAllowedModels: document.getElementById("freegptAllowedModels"),
     freegptBlacklistedModels: document.getElementById("freegptBlacklistedModels"),
     freegptRequestTimeoutMs: document.getElementById("freegptRequestTimeoutMs"),
+    lsshirtaiEnabled: document.getElementById("lsshirtaiEnabled"),
+    lsshirtaiBaseUrl: document.getElementById("lsshirtaiBaseUrl"),
+    lsshirtaiAuthToken: document.getElementById("lsshirtaiAuthToken"),
+    lsshirtaiXAppVersion: document.getElementById("lsshirtaiXAppVersion"),
+    lsshirtaiDefaultModel: document.getElementById("lsshirtaiDefaultModel"),
+    lsshirtaiAllowedModels: document.getElementById("lsshirtaiAllowedModels"),
+    lsshirtaiBlacklistedModels: document.getElementById("lsshirtaiBlacklistedModels"),
+    lsshirtaiRequestTimeoutMs: document.getElementById("lsshirtaiRequestTimeoutMs"),
+    lsshirtaiDeleteSessionAfterResponse: document.getElementById("lsshirtaiDeleteSessionAfterResponse"),
     
     // Import / Export
     exportConfigBtn: document.getElementById("exportConfigBtn"),
@@ -294,6 +303,15 @@ async function saveGlobalConfig() {
             freegptAllowedModels: elements.freegptAllowedModels.value.trim(),
             freegptBlacklistedModels: elements.freegptBlacklistedModels.value.trim(),
             freegptRequestTimeoutMs: toNumberString(elements.freegptRequestTimeoutMs.value),
+            lsshirtaiEnabled: elements.lsshirtaiEnabled.value === "true",
+            lsshirtaiBaseUrl: elements.lsshirtaiBaseUrl.value.trim(),
+            lsshirtaiAuthToken: elements.lsshirtaiAuthToken.value.trim(),
+            lsshirtaiXAppVersion: elements.lsshirtaiXAppVersion.value.trim(),
+            lsshirtaiDefaultModel: elements.lsshirtaiDefaultModel.value.trim(),
+            lsshirtaiAllowedModels: elements.lsshirtaiAllowedModels.value.trim(),
+            lsshirtaiBlacklistedModels: elements.lsshirtaiBlacklistedModels.value.trim(),
+            lsshirtaiRequestTimeoutMs: toNumberString(elements.lsshirtaiRequestTimeoutMs.value),
+            lsshirtaiDeleteSessionAfterResponse: elements.lsshirtaiDeleteSessionAfterResponse.value === "true",
         };
 
         const response = await requestJson("/admin/api/config", {
@@ -385,6 +403,33 @@ function renderChannelsList() {
         </div>
     `;
     elements.channelsList.insertAdjacentHTML('beforeend', gptallChannelHTML);
+
+    // Virtual Channel for lsshirtai
+    const lssEnabled = state.config.lsshirtaiEnabled === true;
+    const lssChannelHTML = `
+        <div class="channel-row">
+            <div class="channel-row-header" onclick="toggleAccordion(this)">
+                <div class="channel-info-short">
+                    <div class="channel-icon">🪶</div>
+                    <div class="stack" style="gap:2px;">
+                        <div class="channel-title">lsshirtai 独立渠道 (纯文本)</div>
+                        <div class="channel-badge">不匹配工具调用</div>
+                    </div>
+                </div>
+                <div class="channel-status ${lssEnabled ? 'active' : ''}" onclick="toggleLsshirtai(event, this)"></div>
+            </div>
+            <div class="channel-body">
+                <div class="channel-detail-grid">
+                    <div><strong>API 地址:</strong> ${escapeHtml(state.config.lsshirtaiBaseUrl || "-")}</div>
+                    <div><strong>API 凭证:</strong> <span style="filter: blur(4px); cursor:pointer;" onclick="this.style.filter='none'">${escapeHtml(state.config.lsshirtaiAuthToken || "未配置")}</span></div>
+                </div>
+                <div class="channel-actions flex-between" style="gap:10px;">
+                    <button class="ghost-button" style="flex:1" onclick="openChannelModelsModal('lsshirtai')" type="button">管理查看内置模型</button>
+                </div>
+            </div>
+        </div>
+    `;
+    elements.channelsList.insertAdjacentHTML('beforeend', lssChannelHTML);
     
     // Custom Channels
     state.channels.forEach((ch, index) => {
@@ -518,6 +563,28 @@ window.toggleGptAll = async function(event, el) {
         fetchModels(true);
     } catch (e) {
         alert("保存 gpt-all 状态配置失败:" + e.message);
+    }
+}
+
+window.toggleLsshirtai = async function(event, el) {
+    event.stopPropagation();
+    const isEnabled = state.config.lsshirtaiEnabled === true;
+    const newEnabled = !isEnabled;
+    if(newEnabled) el.classList.add('active');
+    else el.classList.remove('active');
+
+    try {
+        const response = await requestJson("/admin/api/config", {
+            body: JSON.stringify({ lsshirtaiEnabled: newEnabled }),
+            headers: { "Content-Type": "application/json" },
+            method: "PUT",
+        });
+        state.config = response.config || state.config;
+        fetchModels(true);
+        renderChannelsList();
+    } catch (e) {
+        alert("保存 lsshirtai 状态配置失败:" + e.message);
+        renderChannelsList();
     }
 }
 
@@ -715,10 +782,12 @@ window.removeModelsFromBlacklist = async function() {
 }
 
 function getChannelFilteredModels(sourceId, isGptAll) {
-    const ch = (sourceId === 'ai8' || isGptAll) ? null : state.channels[sourceId];
+    const isLss = sourceId === 'lsshirtai';
+    const ch = (sourceId === 'ai8' || isGptAll || isLss) ? null : state.channels[sourceId];
     return state.models.filter(m => {
         if (sourceId === 'ai8') return m.channel === 'ai8' || (m.attr && m.attr.providerName === 'ai8') || (m.channel === undefined);
         if (isGptAll) return m._source === 'gptall' || m.channel === 'gpt-all' || (m.attr && m.attr.providerName === 'gpt-all');
+        if (isLss) return m._source === 'lsshirtai' || m.channel === 'lsshirtai' || (m.attr && m.attr.providerName === 'lsshirtai');
         return ch && (m.channel === ch.name || (m.attr && m.attr.providerName === ch.name));
     });
 }
@@ -735,6 +804,10 @@ function getChannelSelection(sourceId, isGptAll, mode) {
         const raw = mode === 'blacklist' ? state.config.gptallBlacklistedModels : state.config.gptallAllowedModels;
         return parseList(raw);
     }
+    if (sourceId === 'lsshirtai') {
+        const raw = mode === 'blacklist' ? state.config.lsshirtaiBlacklistedModels : state.config.lsshirtaiAllowedModels;
+        return parseList(raw);
+    }
     const ch = state.channels[sourceId];
     if (mode === 'blacklist') {
         return Array.isArray(ch && ch.blacklistedModels) ? ch.blacklistedModels : [];
@@ -745,7 +818,8 @@ function getChannelSelection(sourceId, isGptAll, mode) {
 function renderChannelModelChecklist() {
     const sourceId = document.getElementById('modelsModal').dataset.activeSourceId;
     const isGptAll = sourceId === 'gptall';
-    const ch = (sourceId === 'ai8' || isGptAll) ? null : state.channels[sourceId];
+    const isLss = sourceId === 'lsshirtai';
+    const ch = (sourceId === 'ai8' || isGptAll || isLss) ? null : state.channels[sourceId];
     const mode = document.getElementById('channelModelsMode').value;
     const meta = document.getElementById('channelModelsMeta');
     if (mode === 'blacklist') {
@@ -784,10 +858,11 @@ function renderChannelModelChecklist() {
 
 window.openChannelModelsModal = function(sourceId) {
     const isGptAll = sourceId === 'gptall';
-    const ch = (sourceId === 'ai8' || isGptAll) ? null : state.channels[sourceId];
+    const isLss = sourceId === 'lsshirtai';
+    const ch = (sourceId === 'ai8' || isGptAll || isLss) ? null : state.channels[sourceId];
     const filteredModels = getChannelFilteredModels(sourceId, isGptAll);
     
-    let sourceName = sourceId === 'ai8' ? '原生 AI8' : (isGptAll ? '原生 gpt-all' : (ch ? ch.name : "未知渠道"));
+    let sourceName = sourceId === 'ai8' ? '原生 AI8' : (isGptAll ? '原生 gpt-all' : (isLss ? '原生 lsshirtai' : (ch ? ch.name : "未知渠道")));
     document.getElementById('modelsModalTitle').textContent = `[${escapeHtml(sourceName)}] 专属模型池`;
     
     // Store sourceId globally to use it in Save button
@@ -836,6 +911,7 @@ document.getElementById('btnSaveChannelModels').addEventListener('click', async 
     const checkboxes = document.querySelectorAll('#channelModelsList .channel-model-checkbox:checked');
     const selectedModels = Array.from(checkboxes).map(cb => cb.value);
     const isGptAll = sourceId === 'gptall';
+    const isLss = sourceId === 'lsshirtai';
     
     try {
         const btn = document.getElementById('btnSaveChannelModels');
@@ -859,6 +935,15 @@ document.getElementById('btnSaveChannelModels').addEventListener('click', async 
                 body: JSON.stringify(mode === 'blacklist'
                     ? { gptallBlacklistedModels: selectedModels.join(",") }
                     : { gptallAllowedModels: selectedModels.join(",") })
+            });
+            state.config = response.config || state.config;
+        } else if (isLss) {
+            const response = await requestJson("/admin/api/config", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(mode === 'blacklist'
+                    ? { lsshirtaiBlacklistedModels: selectedModels.join(",") }
+                    : { lsshirtaiAllowedModels: selectedModels.join(",") })
             });
             state.config = response.config || state.config;
         } else {
@@ -1028,6 +1113,15 @@ function renderConfig(config) {
     if (elements.freegptAllowedModels) elements.freegptAllowedModels.value = config.freegptAllowedModels || "";
     if (elements.freegptBlacklistedModels) elements.freegptBlacklistedModels.value = config.freegptBlacklistedModels || "";
     if (elements.freegptRequestTimeoutMs) elements.freegptRequestTimeoutMs.value = config.freegptRequestTimeoutMs || "";
+    if (elements.lsshirtaiEnabled) elements.lsshirtaiEnabled.value = config.lsshirtaiEnabled === true ? "true" : "false";
+    if (elements.lsshirtaiBaseUrl) elements.lsshirtaiBaseUrl.value = config.lsshirtaiBaseUrl || "";
+    if (elements.lsshirtaiAuthToken) elements.lsshirtaiAuthToken.value = config.lsshirtaiAuthToken || "";
+    if (elements.lsshirtaiXAppVersion) elements.lsshirtaiXAppVersion.value = config.lsshirtaiXAppVersion || "";
+    if (elements.lsshirtaiDefaultModel) elements.lsshirtaiDefaultModel.value = config.lsshirtaiDefaultModel || "";
+    if (elements.lsshirtaiAllowedModels) elements.lsshirtaiAllowedModels.value = config.lsshirtaiAllowedModels || "";
+    if (elements.lsshirtaiBlacklistedModels) elements.lsshirtaiBlacklistedModels.value = config.lsshirtaiBlacklistedModels || "";
+    if (elements.lsshirtaiRequestTimeoutMs) elements.lsshirtaiRequestTimeoutMs.value = config.lsshirtaiRequestTimeoutMs || "";
+    if (elements.lsshirtaiDeleteSessionAfterResponse) elements.lsshirtaiDeleteSessionAfterResponse.value = config.lsshirtaiDeleteSessionAfterResponse === false ? "false" : "true";
 }
 
 async function loadLogs() {

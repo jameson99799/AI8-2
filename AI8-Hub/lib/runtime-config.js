@@ -44,6 +44,15 @@ const EDITABLE_FIELDS = [
     "freegptAllowedModels",
     "freegptBlacklistedModels",
     "freegptRequestTimeoutMs",
+    "lsshirtaiEnabled",
+    "lsshirtaiBaseUrl",
+    "lsshirtaiAuthToken",
+    "lsshirtaiXAppVersion",
+    "lsshirtaiDefaultModel",
+    "lsshirtaiAllowedModels",
+    "lsshirtaiBlacklistedModels",
+    "lsshirtaiRequestTimeoutMs",
+    "lsshirtaiDeleteSessionAfterResponse",
 ];
 
 class RuntimeConfigStore {
@@ -139,6 +148,15 @@ class RuntimeConfigStore {
             freegptAllowedModels: this.runtimeConfig.freegptAllowedModels.join(","),
             freegptBlacklistedModels: this.runtimeConfig.freegptBlacklistedModels.join(","),
             freegptRequestTimeoutMs: this.runtimeConfig.freegptRequestTimeoutMs,
+            lsshirtaiEnabled: this.runtimeConfig.lsshirtaiEnabled,
+            lsshirtaiBaseUrl: this.runtimeConfig.lsshirtaiBaseUrl,
+            lsshirtaiAuthToken: this.runtimeConfig.lsshirtaiAuthToken,
+            lsshirtaiXAppVersion: this.runtimeConfig.lsshirtaiXAppVersion,
+            lsshirtaiDefaultModel: this.runtimeConfig.lsshirtaiDefaultModel,
+            lsshirtaiAllowedModels: this.runtimeConfig.lsshirtaiAllowedModels.join(","),
+            lsshirtaiBlacklistedModels: this.runtimeConfig.lsshirtaiBlacklistedModels.join(","),
+            lsshirtaiRequestTimeoutMs: this.runtimeConfig.lsshirtaiRequestTimeoutMs,
+            lsshirtaiDeleteSessionAfterResponse: this.runtimeConfig.lsshirtaiDeleteSessionAfterResponse,
         };
     }
 
@@ -198,6 +216,15 @@ class RuntimeConfigStore {
             freegptAllowedModels: process.env.FREEGPT_ALLOWED_MODELS,
             freegptBlacklistedModels: process.env.FREEGPT_BLACKLISTED_MODELS,
             freegptRequestTimeoutMs: process.env.FREEGPT_REQUEST_TIMEOUT_MS,
+            lsshirtaiEnabled: process.env.LSSHIRTAI_ENABLED,
+            lsshirtaiBaseUrl: process.env.LSSHIRTAI_BASE_URL,
+            lsshirtaiAuthToken: process.env.LSSHIRTAI_AUTH_TOKEN,
+            lsshirtaiXAppVersion: process.env.LSSHIRTAI_X_APP_VERSION,
+            lsshirtaiDefaultModel: process.env.LSSHIRTAI_DEFAULT_MODEL,
+            lsshirtaiAllowedModels: process.env.LSSHIRTAI_ALLOWED_MODELS,
+            lsshirtaiBlacklistedModels: process.env.LSSHIRTAI_BLACKLISTED_MODELS,
+            lsshirtaiRequestTimeoutMs: process.env.LSSHIRTAI_REQUEST_TIMEOUT_MS,
+            lsshirtaiDeleteSessionAfterResponse: process.env.LSSHIRTAI_DELETE_SESSION_AFTER_RESPONSE,
             ...defaults,
         };
     }
@@ -304,6 +331,29 @@ function normalizeConfig(source = {}) {
         freegptRequestTimeoutMs: parseNumber(
             source.freegptRequestTimeoutMs ?? source.FREEGPT_REQUEST_TIMEOUT_MS,
             300000
+        ),
+        lsshirtaiEnabled: parseBoolean(source.lsshirtaiEnabled ?? source.LSSHIRTAI_ENABLED, false),
+        lsshirtaiBaseUrl: normalizeString(
+            source.lsshirtaiBaseUrl || source.LSSHIRTAI_BASE_URL || "https://www.lsshirtai.com/api"
+        ),
+        lsshirtaiAuthToken: normalizeString(source.lsshirtaiAuthToken || source.LSSHIRTAI_AUTH_TOKEN),
+        lsshirtaiXAppVersion: normalizeString(
+            source.lsshirtaiXAppVersion || source.LSSHIRTAI_X_APP_VERSION || "3.4.2"
+        ),
+        lsshirtaiDefaultModel: normalizeString(
+            source.lsshirtaiDefaultModel || source.LSSHIRTAI_DEFAULT_MODEL || "google::gemini-3.7-flash"
+        ),
+        lsshirtaiAllowedModels: parseCsv(source.lsshirtaiAllowedModels ?? source.LSSHIRTAI_ALLOWED_MODELS ?? ""),
+        lsshirtaiBlacklistedModels: parseCsv(
+            source.lsshirtaiBlacklistedModels ?? source.LSSHIRTAI_BLACKLISTED_MODELS ?? ""
+        ),
+        lsshirtaiRequestTimeoutMs: parseNumber(
+            source.lsshirtaiRequestTimeoutMs ?? source.LSSHIRTAI_REQUEST_TIMEOUT_MS,
+            300000
+        ),
+        lsshirtaiDeleteSessionAfterResponse: parseBoolean(
+            source.lsshirtaiDeleteSessionAfterResponse ?? source.LSSHIRTAI_DELETE_SESSION_AFTER_RESPONSE,
+            true
         ),
     };
 }

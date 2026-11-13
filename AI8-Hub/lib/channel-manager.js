@@ -2,7 +2,81 @@
 
 const GptAllClient = require("./gptall-client");
 const FreeGptClient = require("./freegpt-client");
-const { AI8_DRAW_MODELS } = require("./ai8-client");
+const AI8Client = require("./ai8-client");
+const { AI8_DRAW_MODELS } = AI8Client;
+
+const LSS_CHANNEL_NAME = "lsshirtai";
+const LSS_MODEL_SUFFIX = `【${LSS_CHANNEL_NAME}】`;
+
+// lsshirtai's catalog is a chat-model list, but it also exposes image,
+// video, realtime, audio and embedding entries. Those cannot be driven
+// through the text chat endpoint, so keep them out of the aggregate pool.
+const LSS_EXCLUDED_MODEL_PATTERN =
+    /(?:^|[-_.:/])(dall-?e|gpt-image|image|imagen|imagine|nano-banana|flux|midjourney|niji|mj|sora|veo|runway|pika|kling|seedream|seedance|recraft|ideogram|stable-diffusion|sdxl|cogview|kolors|wan\d|qwen-image|hunyuan-image|realtime|live|audio|tts|whisper|transcribe|speech|embedding|embed|moderation|rerank)(?:$|[-_.:/])/i;
+
+function isLssChatModel(model) {
+    const raw = String(model?.value || model?.model || model?.id || "").trim();
+    if (!raw) {
+        return false;
+    }
+
+    const name = raw.includes("::") ? raw.split("::").pop() : raw;
+    const type = String(model?.type || model?.attr?.type || "").toLowerCase();
+    if (["image", "image_generation", "video", "audio", "realtime", "embedding"].includes(type)) {
+        return false;
+    }
+
+    return !LSS_EXCLUDED_MODEL_PATTERN.test(name);
+}
+
+function lssModelIdMatches(list, modelId) {
+    const id = String(modelId || "").trim();
+    if (!id) {
+        return false;
+    }
+
+    const shortId = id.includes("::") ? id.split("::").pop() : id;
+    return (Array.isArray(list) ? list : []).some(item => {
+        const value = String(item || "").trim();
+        if (!value) {
+            return false;
+        }
+        const shortValue = value.includes("::") ? value.split("::").pop() : value;
+        return value === id || value === shortId || shortValue === shortId;
+    });
+}
+
+function toLssAggregatedModel(model) {
+    const origId = String(model?.value || model?.model || model?.id || "").trim();
+    if (!origId) {
+        return null;
+    }
+
+    const value = `${origId}${LSS_MODEL_SUFFIX}`;
+    return {
+        label: value,
+        value,
+        origId,
+        channel: LSS_CHANNEL_NAME,
+        attr: { providerName: LSS_CHANNEL_NAME, capabilities: { tools: false } },
+        _source: LSS_CHANNEL_NAME,
+        _actualModel: origId,
+        _isToolSupported: false,
+    };
+}
+
+function buildLssClient(config) {
+    if (!config || !config.lsshirtaiAuthToken) {
+        throw new Error("LSSHIRTAI_AUTH_TOKEN is not configured.");
+    }
+    return new AI8Client({
+        authToken: config.lsshirtaiAuthToken,
+        baseUrl: config.lsshirtaiBaseUrl,
+        defaultModel: config.lsshirtaiDefaultModel,
+        requestTimeoutMs: config.lsshirtaiRequestTimeoutMs,
+        xAppVersion: config.lsshirtaiXAppVersion,
+    });
+}
 
 function buildGptAllClient(config) {
     if (!config || !config.gptallAuthToken) {
@@ -50,6 +124,11 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
     }
 
     const fetchTasks = [];
+    // Admin listings may inspect the catalog before the channel is enabled so
+    // the whitelist/blacklist can be prepared. Client listings stay hidden
+    // until the channel is actually turned on.
+    const lssRequested =
+        Boolean(config.lsshirtaiAuthToken) && (config.lsshirtaiEnabled === true || forAdmin === true);
 
     if (config.ai8Enabled !== false) {
         fetchTasks.push(
@@ -96,6 +175,17 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
         );
     }
 
+    if (lssRequested) {
+        fetchTasks.push(
+            buildLssClient(config).fetchModels()
+                .then(lssModels => (lssModels || []).filter(isLssChatModel))
+                .catch(e => {
+                    if (logger) logger.warn("Failed to fetch lsshirtai models", { error: String(e) });
+                    return [];
+                })
+        );
+    }
+
     const customChannelTasks = (config.customChannels || [])
         .filter(channel => channel.enabled)
         .map(channel => {
@@ -134,6 +224,7 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
     const ai8DrawModels = ai8Requested ? results[offset++] || [] : [];
     let gptallModels = gptallRequested ? results[offset++] || [] : [];
     let freegptModels = freegptRequested ? results[offset++] || [] : [];
+    const lssModels = lssRequested ? results[offset++] || [] : [];
     const customResults = results.slice(offset);
     if (!Array.isArray(gptallModels)) {
         gptallModels = [];
@@ -215,6 +306,13 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
         }
     }
 
+    for (const lssModel of (lssModels || [])) {
+        const aggregated = toLssAggregatedModel(lssModel);
+        if (aggregated && !allModels.some(m => m._source === LSS_CHANNEL_NAME && m.origId === aggregated.origId)) {
+            allModels.push(aggregated);
+        }
+    }
+
     for (const { channel, models } of customResults) {
         for (const m of models) {
             if (!m || m.id === undefined || m.id === null) continue;
@@ -268,6 +366,14 @@ function filterCachedModels(models, config, forAdmin) {
             if (freegptBlacklist !== null && freegptBlacklist.includes(m.origId)) return false;
             return true;
         }
+        if (m._source === LSS_CHANNEL_NAME) {
+            if (config.lsshirtaiEnabled !== true) return false;
+            const lssWhitelist = Array.isArray(config.lsshirtaiAllowedModels) && config.lsshirtaiAllowedModels.length > 0 ? config.lsshirtaiAllowedModels : null;
+            if (lssWhitelist !== null && !lssModelIdMatches(lssWhitelist, m.origId)) return false;
+            const lssBlacklist = Array.isArray(config.lsshirtaiBlacklistedModels) && config.lsshirtaiBlacklistedModels.length > 0 ? config.lsshirtaiBlacklistedModels : null;
+            if (lssBlacklist !== null && lssModelIdMatches(lssBlacklist, m.origId)) return false;
+            return true;
+        }
         const channel = (config.customChannels || []).find(c => c.name === m._source);
         if (!channel) return false;
         if (!channel.enabled) return false;
@@ -287,6 +393,10 @@ function isBlacklisted(requestModel, config, targetChannel) {
     if (targetChannel && targetChannel.name === "freegpt") {
         const list = Array.isArray(config.freegptBlacklistedModels) ? config.freegptBlacklistedModels : [];
         return list.includes(requestModel);
+    }
+    if (targetChannel && targetChannel.name === LSS_CHANNEL_NAME) {
+        const list = Array.isArray(config.lsshirtaiBlacklistedModels) ? config.lsshirtaiBlacklistedModels : [];
+        return lssModelIdMatches(list, requestModel);
     }
     if (targetChannel) {
         const list = Array.isArray(targetChannel.blacklistedModels) ? targetChannel.blacklistedModels : [];
@@ -339,6 +449,13 @@ async function resolveTargetChannelUncached(requestModel, config, client, logger
                 toolSupported: null,
             };
         }
+        if (channelName === LSS_CHANNEL_NAME || channelName === "lss") {
+            return {
+                targetChannel: { protocol: LSS_CHANNEL_NAME, name: LSS_CHANNEL_NAME },
+                actualModel,
+                toolSupported: false,
+            };
+        }
     }
     
     // 2. Try to find in cache for unprefixed models
@@ -357,6 +474,10 @@ async function resolveTargetChannelUncached(requestModel, config, client, logger
         } else if (cached && cached._source === "freegpt") {
             targetChannel = { protocol: "freegpt", name: "freegpt" };
             actualModel = cached._actualModel || requestModel;
+        } else if (cached && cached._source === LSS_CHANNEL_NAME && config.lsshirtaiEnabled === true) {
+            targetChannel = { protocol: LSS_CHANNEL_NAME, name: LSS_CHANNEL_NAME };
+            actualModel = cached._actualModel || requestModel;
+            toolSupported = false;
         } else if (cached && cached._source !== "ai8") {
             const customChannels = config.customChannels || [];
             targetChannel = customChannels.find(c => c.name === cached._source && c.enabled);
@@ -595,4 +716,4 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
     }
 }
 
-module.exports = { buildGptAllClient, buildFreeGptClient, clearResolutionCache, fetchAggregatedModels, proxyToCustomChannel, resolveTargetChannel, isBlacklisted, filterCachedModels, sanitizeToolSchemas };
+module.exports = { buildGptAllClient, buildFreeGptClient, buildLssClient, clearResolutionCache, fetchAggregatedModels, isLssChatModel, toLssAggregatedModel, proxyToCustomChannel, resolveTargetChannel, isBlacklisted, filterCachedModels, sanitizeToolSchemas, LSS_CHANNEL_NAME, LSS_MODEL_SUFFIX };

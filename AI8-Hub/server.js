@@ -37,7 +37,7 @@ const {
     openAiToAnthropicChunk,
     openAiToAnthropicResponse,
 } = require("./lib/anthropic-format");
-const { buildFreeGptClient, buildGptAllClient, fetchAggregatedModels, proxyToCustomChannel, resolveTargetChannel, isBlacklisted } = require("./lib/channel-manager");
+const { buildFreeGptClient, buildGptAllClient, buildLssClient, fetchAggregatedModels, isLssChatModel, proxyToCustomChannel, resolveTargetChannel, isBlacklisted } = require("./lib/channel-manager");
 const toolMarker = require("./lib/tool-marker");
 const { initHttpPool } = require("./lib/http-pool");
 
@@ -66,6 +66,11 @@ const gptallClientState = {
 };
 
 const freegptClientState = {
+    instance: null,
+    signature: "",
+};
+
+const lssClientState = {
     instance: null,
     signature: "",
 };
@@ -448,6 +453,12 @@ async function handleChatCompletion(req, res, body) {
 
     if (targetChannel?.protocol === "freegpt") {
         return handleFreeGptChatCompletion(req, res, actualModel, body, config);
+    }
+
+    if (targetChannel?.protocol === "lsshirtai") {
+        // lsshirtai is a text-only channel: tools are deliberately ignored,
+        // and no tool-marker prompt or tool_calls output is produced.
+        return handleLssChatCompletion(req, res, actualModel, body, config);
     }
 
     if (targetChannel) {
@@ -1586,6 +1597,153 @@ async function handleFreeGptChatCompletion(req, res, model, body, config) {
     );
 }
 
+async function handleLssChatCompletion(req, res, model, body, config) {
+    const lssClient = getLssClient();
+    const created = Math.floor(Date.now() / 1000);
+    const completionId = randomId("chatcmpl");
+    const requestModel = String(body.model || model || config.lsshirtaiDefaultModel || "").trim();
+    const resolvedModel = await lssClient.resolveModel(model || config.lsshirtaiDefaultModel);
+    if (!isLssChatModel(resolvedModel)) {
+        throw createHttpError(400, `Model "${resolvedModel.value}" is not a lsshirtai text chat model.`);
+    }
+
+    // Tools are intentionally not matched for this channel. Claude Code will
+    // receive plain assistant text, and any incoming tool definitions are
+    // ignored rather than forwarded upstream.
+    const preparedMessages = await prepareMessages(body.messages, false, {
+        injectSystemPromptOnReuse: false,
+        mediaFetchTimeoutMs: config.mediaFetchTimeoutMs,
+    });
+    const sessionPrompt = resolveSessionPrompt(body, preparedMessages);
+    const thinking = resolveThinking(req, body, false);
+    const maxToken = resolveSessionMaxToken(body.max_tokens, config);
+    const deleteSessionAfterResponse = config.lsshirtaiDeleteSessionAfterResponse !== false;
+
+    if (body.stream) {
+        await handleStreamingChatCompletion(req, res, {
+            client: lssClient,
+            completionId,
+            created,
+            deleteSessionAfterResponse,
+            maxToken,
+            model: resolvedModel.value,
+            preparedMessages,
+            sessionPrompt,
+            streamIncludeUsage: Boolean(body?.stream_options?.include_usage),
+            temperature: body.temperature,
+            thinking,
+            toolMode: false,
+        });
+        return;
+    }
+
+    let session = await lssClient.createSession({
+        maxToken,
+        model: resolvedModel.value,
+        prompt: sessionPrompt.value,
+        temperature: body.temperature,
+    });
+
+    if (sessionPrompt.value) {
+        session = await lssClient.updateSession(session, {
+            prompt: sessionPrompt.value,
+        });
+    }
+
+    res.setHeader("x-lsshirtai-session-id", String(session.id));
+    res.setHeader("x-lsshirtai-session-prompt-source", String(sessionPrompt.source || "none"));
+    res.setHeader("x-lsshirtai-session-prompt-present", sessionPrompt.value ? "true" : "false");
+
+    const abortController = new AbortController();
+    req.on("close", () => abortController.abort());
+
+    let content = "";
+    let finalRecord = null;
+    let reasoningContent = "";
+
+    try {
+        const streamResult = await lssClient.streamChatCompletion(
+            {
+                files: preparedMessages.files,
+                sessionId: session.id,
+                signal: abortController.signal,
+                text: preparedMessages.text,
+                thinking,
+                timeoutMs: STREAM_TIMEOUT_MS,
+            },
+            {
+                onObject(record) {
+                    finalRecord = record;
+                    if (typeof record?.aiText === "string" && record.aiText) {
+                        content = record.aiText;
+                    }
+                },
+                onReasoning(chunk) {
+                    reasoningContent += chunk;
+                },
+                onText(chunk) {
+                    content += chunk;
+                },
+            }
+        );
+
+        if (streamResult?.taskId) {
+            res.setHeader("x-lsshirtai-task-id", String(streamResult.taskId));
+        }
+
+        const finalContent = resolveFinalContent(finalRecord || streamResult?.record, content);
+        const images = extractAi8Images(finalContent);
+        if (images.length > 0) {
+            res.setHeader("x-lsshirtai-image-count", String(images.length));
+        }
+
+        res.json(
+            buildChatCompletion({
+                content: finalContent,
+                created,
+                id: completionId,
+                images,
+                metadata: buildAi8Metadata({
+                    channel: "lsshirtai",
+                    imageCount: images.length,
+                    sessionId: session.id,
+                    taskId: streamResult?.taskId || null,
+                }),
+                model: requestModel,
+                reasoningContent: reasoningContent || finalRecord?.reasoning_content || null,
+                usage: normalizeUsage(finalRecord || streamResult?.record),
+            })
+        );
+    } finally {
+        if (deleteSessionAfterResponse) {
+            scheduleSessionDeletion(
+                lssClient,
+                session.id,
+                abortController.signal.aborted ? "non_stream_abort" : "non_stream_response"
+            );
+        }
+    }
+}
+
+function getLssClient() {
+    const config = getConfig();
+    const signature = JSON.stringify([
+        config.lsshirtaiBaseUrl,
+        config.lsshirtaiAuthToken,
+        config.lsshirtaiDefaultModel,
+        config.lsshirtaiRequestTimeoutMs,
+        config.lsshirtaiXAppVersion,
+    ]);
+    if (!lssClientState.instance || lssClientState.signature !== signature) {
+        if (!config.lsshirtaiAuthToken) {
+            throw createHttpError(502, "lsshirtai channel is not configured: LSSHIRTAI_AUTH_TOKEN is missing.");
+        }
+        lssClientState.instance = buildLssClient(config);
+        lssClientState.signature = signature;
+    }
+    return lssClientState.instance;
+}
+
 async function handleGptAllChatCompletion(req, res, model, body, config, resolvedToolSupported = null) {
     const gptallClient = getGptAllClient();
     const created = Math.floor(Date.now() / 1000);
@@ -2101,6 +2259,7 @@ function buildRuntimeSnapshot(req) {
             upstream_ready: Boolean(config.ai8AuthToken),
             gptall_ready: Boolean(config.gptallAuthToken) && config.gptallEnabled !== false,
             freegpt_ready: Boolean(config.freegptUuid) && config.freegptEnabled !== false,
+            lsshirtai_ready: Boolean(config.lsshirtaiAuthToken) && config.lsshirtaiEnabled === true,
         },
         config: {
             ai8_base_url: config.ai8BaseUrl,
@@ -2121,6 +2280,10 @@ function buildRuntimeSnapshot(req) {
             freegpt_enabled: config.freegptEnabled ?? false,
             freegpt_base_url: config.freegptBaseUrl,
             freegpt_default_model: config.freegptDefaultModel,
+            lsshirtai_configured: Boolean(config.lsshirtaiAuthToken),
+            lsshirtai_enabled: config.lsshirtaiEnabled ?? false,
+            lsshirtai_base_url: config.lsshirtaiBaseUrl,
+            lsshirtai_default_model: config.lsshirtaiDefaultModel,
         },
         network: {
             base_url_candidates: baseUrlCandidates,
@@ -2159,6 +2322,10 @@ function buildEffectiveConfigSummary(config) {
         gptall_enabled: config.gptallEnabled ?? false,
         gptall_base_url: config.gptallBaseUrl,
         gptall_default_model: config.gptallDefaultModel,
+        lsshirtai_configured: Boolean(config.lsshirtaiAuthToken),
+        lsshirtai_enabled: config.lsshirtaiEnabled ?? false,
+        lsshirtai_base_url: config.lsshirtaiBaseUrl,
+        lsshirtai_default_model: config.lsshirtaiDefaultModel,
     };
 }
 

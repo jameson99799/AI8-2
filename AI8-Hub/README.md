@@ -85,6 +85,19 @@ GPTALL_ALLOWED_MODELS=doubao-seed-2.0-lite,gpt-5.4-mini
 GPTALL_REQUEST_TIMEOUT_MS=300000
 ```
 
+Optional lsshirtai channel (independent channel, text-only, models get the `【lsshirtai】` suffix):
+
+```env
+LSSHIRTAI_ENABLED=true
+LSSHIRTAI_AUTH_TOKEN=your_lsshirtai_jwt
+LSSHIRTAI_BASE_URL=https://www.lsshirtai.com/api
+LSSHIRTAI_X_APP_VERSION=3.4.2
+LSSHIRTAI_DEFAULT_MODEL=google::gemini-3.7-flash
+LSSHIRTAI_ALLOWED_MODELS=google::gemini-3.7-flash,anthropic::claude-opus-4-6
+LSSHIRTAI_REQUEST_TIMEOUT_MS=300000
+LSSHIRTAI_DELETE_SESSION_AFTER_RESPONSE=true
+```
+
 Notes:
 
 - `API_KEYS` protects your local OpenAI-compatible API.
@@ -93,6 +106,7 @@ Notes:
 - If both `ADMIN_TOKEN` and `API_KEYS` are empty, the server generates a temporary admin token and prints it into the log.
 - Changes made in the web console are persisted into `data/config.json`.
 - If `AI8_SHARED_SESSION_ID` is set, chat requests reuse that AI8 session by default instead of creating a new AI8 conversation each time.
+- `lsshirtai` accepts the raw site JWT in `Authorization` (do not add a `Bearer` prefix) and does not support tool calling; incoming OpenAI/Claude tool definitions are ignored and replies are plain text.
 
 ## Run Locally
 
@@ -149,6 +163,7 @@ The console can:
 - view effective runtime settings
 - update AI8 token, local API keys, admin token, timeouts, default model, and public base URL
 - configure the gpt-all channel (token, cookie, fingerprint, default model, whitelist)
+- configure the text-only lsshirtai channel (JWT, base URL, app version, default model, whitelist)
 - fetch the current upstream model list
 - test upstream connectivity
 - inspect persisted log output
