@@ -106,6 +106,53 @@ function buildFreeGptClient(config) {
     });
 }
 
+// Model aggregation used to build a fresh gpt-all/freegpt/lss client for
+// every aggregation, discarding each client's internal 5-minute model caches
+// and re-hitting their upstreams on every pool refresh. Instances are kept
+// per config signature instead.
+const modelClientCache = new Map();
+
+function cachedChannelModelClient(key, signature, factory) {
+    const cached = modelClientCache.get(key);
+    if (cached && cached.signature === signature) {
+        return cached.instance;
+    }
+    const instance = factory();
+    modelClientCache.set(key, { signature, instance });
+    return instance;
+}
+
+function getGptAllModelClient(config) {
+    const signature = [
+        config.gptallAuthToken,
+        config.gptallBaseUrl,
+        config.gptallCookie,
+        config.gptallFingerprint,
+        config.gptallRequestTimeoutMs,
+    ].join("|");
+    return cachedChannelModelClient("gptall", signature, () => buildGptAllClient(config));
+}
+
+function getFreeGptModelClient(config) {
+    const signature = [
+        config.freegptUuid,
+        config.freegptBaseUrl,
+        config.freegptClientIp,
+        config.freegptRequestTimeoutMs,
+    ].join("|");
+    return cachedChannelModelClient("freegpt", signature, () => buildFreeGptClient(config));
+}
+
+function getLssModelClient(config) {
+    const signature = [
+        config.lsshirtaiAuthToken,
+        config.lsshirtaiBaseUrl,
+        config.lsshirtaiXAppVersion,
+        config.lsshirtaiRequestTimeoutMs,
+    ].join("|");
+    return cachedChannelModelClient("lsshirtai", signature, () => buildLssClient(config));
+}
+
 // Manually added model names ("custom models") are kept per channel so the
 // admin can expose upstream models that the catalog fetch misses. They are
 // merged into the aggregated pool on every read and bypass the channel
@@ -329,11 +376,57 @@ function invalidateModelPool() {
     clearResolutionCache();
 }
 
+let modelRefreshTask = null;
+
+function serveAggregatedModels(config, forAdmin) {
+    return filterCachedModels(withCustomModels(modelCache.models, config), config, forAdmin);
+}
+
+function startAggregation(client, config, logger, forAdmin, forceRefresh) {
+    const task = aggregateUpstreamModels(client, config, logger, forAdmin, forceRefresh).finally(() => {
+        if (modelRefreshTask === task) {
+            modelRefreshTask = null;
+        }
+    });
+    modelRefreshTask = task;
+    return task;
+}
+
 async function fetchAggregatedModels(client, config, forceRefresh, logger, forAdmin = false) {
-    if (!forceRefresh && modelCache.models.length > 0 && Date.now() - modelCache.timestamp < modelCache.ttl) {
-        return filterCachedModels(withCustomModels(modelCache.models, config), config, forAdmin);
+    const cachePopulated = modelCache.models.length > 0;
+    const cacheFresh = cachePopulated && Date.now() - modelCache.timestamp < modelCache.ttl;
+
+    if (cacheFresh && !forceRefresh) {
+        return serveAggregatedModels(config, forAdmin);
     }
 
+    // The admin's manual refresh must return fresh upstream data, and an
+    // empty pool (startup or after invalidation) has nothing to serve yet —
+    // both wait for a real aggregation. Concurrent callers join the in-flight
+    // task instead of stacking duplicate upstream fetches.
+    if (forceRefresh) {
+        await startAggregation(client, config, logger, forAdmin, true);
+        return serveAggregatedModels(config, forAdmin);
+    }
+
+    if (!cachePopulated) {
+        if (!modelRefreshTask) {
+            startAggregation(client, config, logger, forAdmin, false);
+        }
+        await modelRefreshTask;
+        return serveAggregatedModels(config, forAdmin);
+    }
+
+    // Pool is stale but usable: serve it immediately and refresh in the
+    // background so client model listings never block on slow upstreams
+    // (the AI8 draw-models scrape chain alone can take 30s+).
+    if (!modelRefreshTask) {
+        startAggregation(client, config, logger, forAdmin, false).catch(() => {});
+    }
+    return serveAggregatedModels(config, forAdmin);
+}
+
+async function aggregateUpstreamModels(client, config, logger, forAdmin = false, forceRefresh = false) {
     const fetchTasks = [];
     // Admin listings may inspect the catalog before the channel is enabled so
     // the whitelist/blacklist can be prepared. Client listings stay hidden
@@ -351,14 +444,30 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
                 })
         );
         if (typeof client.fetchDrawModels === "function") {
-            fetchTasks.push(
-                client.fetchDrawModels(forceRefresh)
-                    .then(drawModels => (Array.isArray(drawModels) && drawModels.length > 0 ? drawModels : AI8_DRAW_MODELS))
-                    .catch(e => {
-                        if (logger) logger.warn("Failed to scrape AI8 draw models", { error: String(e) });
-                        return AI8_DRAW_MODELS;
-                    })
-            );
+            if (forceRefresh) {
+                // Manual refresh: wait for the real scrape so the admin sees
+                // genuinely fresh data.
+                fetchTasks.push(
+                    client.fetchDrawModels(true)
+                        .then(drawModels => (Array.isArray(drawModels) && drawModels.length > 0 ? drawModels : AI8_DRAW_MODELS))
+                        .catch(e => {
+                            if (logger) logger.warn("Failed to scrape AI8 draw models", { error: String(e) });
+                            return AI8_DRAW_MODELS;
+                        })
+                );
+            } else {
+                // Automatic refresh: the scrape chain (page -> app bundle ->
+                // each chunk, sequential, 15s timeout each) can take 30s+, so
+                // serve the known list right away and scrape in the
+                // background; the next aggregation picks up the result.
+                const knownDrawModels = client._drawModelsCache?.models?.length > 0
+                    ? client._drawModelsCache.models
+                    : AI8_DRAW_MODELS;
+                fetchTasks.push(Promise.resolve(knownDrawModels));
+                client.fetchDrawModels(false).catch(e => {
+                    if (logger) logger.warn("Background AI8 draw model scrape failed", { error: String(e) });
+                });
+            }
         } else {
             fetchTasks.push(Promise.resolve(AI8_DRAW_MODELS));
         }
@@ -366,7 +475,7 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
 
     if (config.gptallEnabled !== false && config.gptallAuthToken) {
         fetchTasks.push(
-            buildGptAllClient(config).fetchModels()
+            getGptAllModelClient(config).fetchModels()
                 .then(gptallModels => gptallModels || [])
                 .catch(e => {
                     if (logger) logger.warn("Failed to fetch gpt-all models", { error: String(e) });
@@ -377,7 +486,7 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
 
     if (config.freegptEnabled !== false && config.freegptUuid) {
         fetchTasks.push(
-            buildFreeGptClient(config).fetchModels()
+            getFreeGptModelClient(config).fetchModels()
                 .then(freegptModels => freegptModels || [])
                 .catch(e => {
                     if (logger) logger.warn("Failed to fetch freegpt models", { error: String(e) });
@@ -388,7 +497,7 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
 
     if (lssRequested) {
         fetchTasks.push(
-            buildLssClient(config).fetchModels()
+            getLssModelClient(config).fetchModels()
                 .then(lssModels => (lssModels || []).filter(isLssChatModel))
                 .catch(e => {
                     if (logger) logger.warn("Failed to fetch lsshirtai models", { error: String(e) });

@@ -53,6 +53,8 @@ function resolveDrawModel(name) {
 }
 
 const DRAW_SCRAPER_TTL_MS = 30 * 60 * 1000;
+// Cap for the /chat/tmpl catalog request; see fetchTemplate.
+const TEMPLATE_FETCH_TIMEOUT_MS = 15000;
 
 function parseDrawVersionsFromChunk(js) {
     const versions = [];
@@ -260,6 +262,7 @@ class AI8Client {
             data: null,
             expiresAt: 0,
         };
+        this._drawScrapeTask = null;
 
         if (!this.authToken) {
             throw new Error("AI8_AUTH_TOKEN is required.");
@@ -272,7 +275,10 @@ class AI8Client {
             return this.templateCache.data;
         }
 
-        const data = await this.requestJson("/chat/tmpl");
+        // The template endpoint is a small JSON list; without a dedicated cap
+        // it inherits requestTimeoutMs (5 minutes) and a hung upstream would
+        // stall every model listing that waits on it.
+        const data = await this.requestJson("/chat/tmpl", { timeoutMs: TEMPLATE_FETCH_TIMEOUT_MS });
         this.templateCache = {
             data,
             expiresAt: now + this.modelCacheTtlMs,
@@ -360,6 +366,23 @@ class AI8Client {
             return this._drawModelsCache.models;
         }
 
+        // The scrape walks a sequential chain (page HTML -> app bundle -> each
+        // draw chunk) that can take tens of seconds. Concurrent background
+        // callers join the in-flight task instead of stacking new chains.
+        if (!forceRefresh && this._drawScrapeTask) {
+            return this._drawScrapeTask;
+        }
+
+        const task = this._scrapeDrawModels().finally(() => {
+            this._drawScrapeTask = null;
+        });
+        if (!forceRefresh) {
+            this._drawScrapeTask = task;
+        }
+        return task;
+    }
+
+    async _scrapeDrawModels() {
         try {
             const origin = new URL(this.baseUrl).origin;
             const pageHtml = await this._scrapeText(`${origin}/draw`);

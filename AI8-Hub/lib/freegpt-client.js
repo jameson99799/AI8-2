@@ -5,6 +5,8 @@ const { generateSecurePayload } = require("./freegpt-wasm");
 
 const DEFAULT_BASE_URL = "https://chat1.freegpt.work";
 const CHALLENGE_TTL_SAFETY_MS = 30 * 1000;
+// Cap for the models catalog request; see gptall-client MODEL_LIST_TIMEOUT_MS.
+const MODEL_LIST_TIMEOUT_MS = 15000;
 
 class FreeGptClient {
     constructor(options = {}) {
@@ -46,7 +48,10 @@ class FreeGptClient {
             return this.modelCache.data;
         }
 
-        const data = await this.requestJson("/api/openai/oneapi/v1/models", { cache: "no-store" });
+        const data = await this.requestJson("/api/openai/oneapi/v1/models", {
+            cache: "no-store",
+            timeoutMs: MODEL_LIST_TIMEOUT_MS,
+        });
         const models = this._flattenModels(data);
         this.modelCache = {
             data: models,

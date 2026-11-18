@@ -1,5 +1,10 @@
 "use strict";
 
+// Cap for the /models/list catalog request; without it the request inherits
+// requestTimeoutMs (5 minutes) and a hung upstream stalls every model
+// aggregation that waits on it.
+const MODEL_LIST_TIMEOUT_MS = 15000;
+
 class GptAllClient {
     constructor(options = {}) {
         this.baseUrl = String(options.baseUrl || "https://gpt-all.chat/api").replace(/\/+$/, "");
@@ -44,7 +49,7 @@ class GptAllClient {
             return this.modelCache.data;
         }
 
-        const data = await this.requestJson("/models/list");
+        const data = await this.requestJson("/models/list", { timeoutMs: MODEL_LIST_TIMEOUT_MS });
         const models = this._flattenModels(data);
         this.modelCache = {
             data: models,
