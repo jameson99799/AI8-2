@@ -106,6 +106,205 @@ function buildFreeGptClient(config) {
     });
 }
 
+// Manually added model names ("custom models") are kept per channel so the
+// admin can expose upstream models that the catalog fetch misses. They are
+// merged into the aggregated pool on every read and bypass the channel
+// whitelist (they are explicitly added), but still honor blacklists.
+const CUSTOM_MODEL_SUFFIX = {
+    ai8: "【AI8直连】",
+    gptall: "【gpt-all】",
+    freegpt: "【freegpt】",
+    [LSS_CHANNEL_NAME]: LSS_MODEL_SUFFIX,
+};
+
+function customModelConfigList(config, source) {
+    if (source === "ai8") {
+        return Array.isArray(config.ai8CustomModels) ? config.ai8CustomModels : [];
+    }
+    if (source === "gptall") {
+        return Array.isArray(config.gptallCustomModels) ? config.gptallCustomModels : [];
+    }
+    if (source === "freegpt") {
+        return Array.isArray(config.freegptCustomModels) ? config.freegptCustomModels : [];
+    }
+    if (source === LSS_CHANNEL_NAME) {
+        return Array.isArray(config.lsshirtaiCustomModels) ? config.lsshirtaiCustomModels : [];
+    }
+    const channel = (config.customChannels || []).find(c => c.name === source);
+    return Array.isArray(channel?.customModels) ? channel.customModels : [];
+}
+
+function isChannelCustomModel(config, source, modelId) {
+    const name = String(modelId || "").trim();
+    if (!name) {
+        return false;
+    }
+
+    const list = customModelConfigList(config, source);
+    if (source === LSS_CHANNEL_NAME) {
+        return lssModelIdMatches(list, name);
+    }
+    return list.includes(name);
+}
+
+function buildCustomModelEntry(config, source, name) {
+    const trimmed = String(name || "").trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    const suffix = CUSTOM_MODEL_SUFFIX[source] || `【${source}】`;
+    const value = `${trimmed}${suffix}`;
+
+    if (source === "ai8") {
+        return {
+            label: value,
+            value,
+            origId: trimmed,
+            channel: "ai8",
+            attr: { providerName: "ai8", custom: true },
+            _source: "ai8",
+            _custom: true,
+        };
+    }
+    if (source === "gptall") {
+        return {
+            label: value,
+            value,
+            origId: trimmed,
+            channel: "gpt-all",
+            attr: { providerName: "gpt-all", custom: true },
+            _source: "gptall",
+            _actualModel: trimmed,
+            _custom: true,
+        };
+    }
+    if (source === "freegpt") {
+        return {
+            label: value,
+            value,
+            origId: trimmed,
+            channel: "freegpt",
+            attr: { providerName: "freegpt", custom: true },
+            _source: "freegpt",
+            _actualModel: trimmed,
+            _custom: true,
+        };
+    }
+    if (source === LSS_CHANNEL_NAME) {
+        const aggregated = toLssAggregatedModel({ value: trimmed });
+        if (!aggregated) {
+            return null;
+        }
+        aggregated.attr = { ...aggregated.attr, custom: true };
+        aggregated._custom = true;
+        return aggregated;
+    }
+
+    const channel = (config.customChannels || []).find(c => c.name === source);
+    if (!channel) {
+        return null;
+    }
+    return {
+        label: value,
+        value,
+        origId: trimmed,
+        channel: channel.name,
+        attr: { providerName: channel.name, custom: true },
+        _source: channel.name,
+        _actualModel: trimmed,
+        _custom: true,
+    };
+}
+
+function withCustomModels(models, config) {
+    const base = Array.isArray(models) ? models : [];
+    const merged = [...base];
+    const sources = [
+        "ai8",
+        "gptall",
+        "freegpt",
+        LSS_CHANNEL_NAME,
+        ...(config.customChannels || []).map(channel => channel.name),
+    ];
+
+    for (const source of sources) {
+        for (const name of customModelConfigList(config, source)) {
+            const entry = buildCustomModelEntry(config, source, name);
+            if (!entry) {
+                continue;
+            }
+            // Skip when an upstream catalog entry already carries this model.
+            if (merged.some(m => m._source === entry._source && (m.origId || m.value) === entry.origId)) {
+                continue;
+            }
+            merged.push(entry);
+        }
+    }
+
+    return merged;
+}
+
+/**
+ * Route a bare (suffix-less) model name through the per-channel manual model
+ * lists so freshly added models work immediately, before the 5-minute model
+ * cache refreshes. AI8 custom names fall through: the default AI8 path plus
+ * the handler-level fallback already covers them.
+ */
+function findCustomModelRoute(requestModel, config) {
+    const name = String(requestModel || "").trim();
+    if (!name || name.includes("【")) {
+        return null;
+    }
+
+    if (
+        config.gptallEnabled !== false &&
+        config.gptallAuthToken &&
+        isChannelCustomModel(config, "gptall", name)
+    ) {
+        return {
+            targetChannel: { protocol: "gptall", name: "gpt-all" },
+            actualModel: name,
+            toolSupported: null,
+        };
+    }
+
+    if (
+        config.freegptEnabled !== false &&
+        config.freegptUuid &&
+        isChannelCustomModel(config, "freegpt", name)
+    ) {
+        return {
+            targetChannel: { protocol: "freegpt", name: "freegpt" },
+            actualModel: name,
+            toolSupported: null,
+        };
+    }
+
+    if (
+        config.lsshirtaiEnabled === true &&
+        config.lsshirtaiAuthToken &&
+        isChannelCustomModel(config, LSS_CHANNEL_NAME, name)
+    ) {
+        return {
+            targetChannel: { protocol: LSS_CHANNEL_NAME, name: LSS_CHANNEL_NAME },
+            actualModel: name,
+            toolSupported: false,
+        };
+    }
+
+    for (const channel of config.customChannels || []) {
+        if (!channel.enabled) {
+            continue;
+        }
+        if ((Array.isArray(channel.customModels) ? channel.customModels : []).includes(name)) {
+            return { targetChannel: channel, actualModel: name, toolSupported: null };
+        }
+    }
+
+    return null;
+}
+
 let modelCache = {
     models: [],
     timestamp: 0,
@@ -118,9 +317,21 @@ function clearResolutionCache() {
     resolutionCache = new Map();
 }
 
+// Drop the aggregated model pool and per-model routing cache so the next
+// read rebuilds them with the latest config (e.g. after adding a manual
+// model or editing channels).
+function invalidateModelPool() {
+    modelCache = {
+        models: [],
+        timestamp: 0,
+        ttl: modelCache.ttl
+    };
+    clearResolutionCache();
+}
+
 async function fetchAggregatedModels(client, config, forceRefresh, logger, forAdmin = false) {
     if (!forceRefresh && modelCache.models.length > 0 && Date.now() - modelCache.timestamp < modelCache.ttl) {
-        return filterCachedModels(modelCache.models, config, forAdmin);
+        return filterCachedModels(withCustomModels(modelCache.models, config), config, forAdmin);
     }
 
     const fetchTasks = [];
@@ -337,7 +548,7 @@ async function fetchAggregatedModels(client, config, forceRefresh, logger, forAd
 
     clearResolutionCache();
 
-    return filterCachedModels(allModels, config, forAdmin);
+    return filterCachedModels(withCustomModels(allModels, config), config, forAdmin);
 }
 
 function filterCachedModels(models, config, forAdmin) {
@@ -345,6 +556,29 @@ function filterCachedModels(models, config, forAdmin) {
     const globalBlacklist = Array.isArray(config.blacklistedModels) && config.blacklistedModels.length > 0 ? config.blacklistedModels : null;
     return models.filter(m => {
         if (globalBlacklist !== null && globalBlacklist.includes(m.value || m.origId)) return false;
+        // Manually added models skip the whitelist but still honor the
+        // channel-level blacklist and the channel's on/off switch.
+        if (m._custom === true) {
+            if (m._source === "ai8") {
+                if (config.ai8Enabled === false) return false;
+                return !(Array.isArray(config.ai8BlacklistedModels) ? config.ai8BlacklistedModels : []).includes(m.origId);
+            }
+            if (m._source === "gptall") {
+                if (config.gptallEnabled === false) return false;
+                return !(Array.isArray(config.gptallBlacklistedModels) ? config.gptallBlacklistedModels : []).includes(m.origId);
+            }
+            if (m._source === "freegpt") {
+                if (config.freegptEnabled === false) return false;
+                return !(Array.isArray(config.freegptBlacklistedModels) ? config.freegptBlacklistedModels : []).includes(m.origId);
+            }
+            if (m._source === LSS_CHANNEL_NAME) {
+                if (config.lsshirtaiEnabled !== true) return false;
+                return !lssModelIdMatches(config.lsshirtaiBlacklistedModels, m.origId);
+            }
+            const channel = (config.customChannels || []).find(c => c.name === m._source);
+            if (!channel || !channel.enabled) return false;
+            return !(Array.isArray(channel.blacklistedModels) ? channel.blacklistedModels : []).includes(m.origId);
+        }
         if (m._source === "ai8") {
             const ai8Whitelist = Array.isArray(config.ai8AllowedModels) && config.ai8AllowedModels.length > 0 ? config.ai8AllowedModels : null;
             if (ai8Whitelist !== null && !ai8Whitelist.includes(m.origId)) return false;
@@ -456,6 +690,13 @@ async function resolveTargetChannelUncached(requestModel, config, client, logger
                 toolSupported: false,
             };
         }
+    }
+
+    // 1.5 Bare model names added manually to a channel route directly from
+    // config, so they work before the shared model cache refreshes.
+    const customRoute = findCustomModelRoute(requestModel, config);
+    if (customRoute) {
+        return customRoute;
     }
     
     // 2. Try to find in cache for unprefixed models
@@ -716,4 +957,4 @@ async function proxyToCustomChannel(req, res, targetChannel, actualModel, body, 
     }
 }
 
-module.exports = { buildGptAllClient, buildFreeGptClient, buildLssClient, clearResolutionCache, fetchAggregatedModels, isLssChatModel, toLssAggregatedModel, proxyToCustomChannel, resolveTargetChannel, isBlacklisted, filterCachedModels, sanitizeToolSchemas, LSS_CHANNEL_NAME, LSS_MODEL_SUFFIX };
+module.exports = { buildGptAllClient, buildFreeGptClient, buildLssClient, clearResolutionCache, fetchAggregatedModels, invalidateModelPool, isChannelCustomModel, isLssChatModel, toLssAggregatedModel, withCustomModels, proxyToCustomChannel, resolveTargetChannel, isBlacklisted, filterCachedModels, sanitizeToolSchemas, LSS_CHANNEL_NAME, LSS_MODEL_SUFFIX };

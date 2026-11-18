@@ -630,7 +630,7 @@ function renderGlobalModels(models) {
     models.forEach(model => {
         const v = String(model.value || model.origId || "").trim();
         if (!v) return;
-        const provider = escapeHtml(model?.attr?.providerName || model.channel || "ai8");
+        const provider = escapeHtml((model?.attr?.providerName || model.channel || "ai8") + (model?.attr?.custom ? " · 手动" : ""));
         const checked = blacklist.includes(v) ? "checked" : "";
         const row = document.createElement("label");
         row.className = "checklist-item flex-between";
@@ -815,6 +815,180 @@ function getChannelSelection(sourceId, isGptAll, mode) {
     return Array.isArray(ch && ch.models) ? ch.models : [];
 }
 
+// ----- Manual (custom) channel models -----
+const CUSTOM_MODEL_SOURCE_META = {
+    ai8: { source: "ai8", suffix: "【AI8直连】", provider: "ai8" },
+    gptall: { source: "gptall", suffix: "【gpt-all】", provider: "gpt-all" },
+    freegpt: { source: "freegpt", suffix: "【freegpt】", provider: "freegpt" },
+    lsshirtai: { source: "lsshirtai", suffix: "【lsshirtai】", provider: "lsshirtai" },
+};
+
+function toNameList(raw) {
+    if (Array.isArray(raw)) return raw.map(s => String(s).trim()).filter(Boolean);
+    return String(raw || "").split(",").map(s => s.trim()).filter(Boolean);
+}
+
+function channelSourceKey(sourceId) {
+    if (CUSTOM_MODEL_SOURCE_META[sourceId]) return CUSTOM_MODEL_SOURCE_META[sourceId].source;
+    const ch = state.channels[sourceId];
+    return ch ? ch.name : sourceId;
+}
+
+function getChannelCustomModels(sourceId) {
+    if (sourceId === 'ai8') return toNameList(state.config.ai8CustomModels);
+    if (sourceId === 'gptall') return toNameList(state.config.gptallCustomModels);
+    if (sourceId === 'freegpt') return toNameList(state.config.freegptCustomModels);
+    if (sourceId === 'lsshirtai') return toNameList(state.config.lsshirtaiCustomModels);
+    const ch = state.channels[sourceId];
+    return Array.isArray(ch && ch.customModels) ? ch.customModels : [];
+}
+
+async function saveChannelCustomModels(sourceId, list) {
+    if (CUSTOM_MODEL_SOURCE_META[sourceId]) {
+        const field = {
+            ai8: 'ai8CustomModels',
+            gptall: 'gptallCustomModels',
+            freegpt: 'freegptCustomModels',
+            lsshirtai: 'lsshirtaiCustomModels',
+        }[sourceId];
+        const response = await requestJson("/admin/api/config", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ [field]: list.join(",") })
+        });
+        state.config = response.config || state.config;
+    } else {
+        const updated = [...state.channels];
+        updated[sourceId] = { ...updated[sourceId], customModels: list };
+        await requestJson("/admin/api/channels", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updated)
+        });
+        state.channels = updated;
+    }
+}
+
+function buildLocalCustomModelEntry(sourceId, name) {
+    const meta = CUSTOM_MODEL_SOURCE_META[sourceId];
+    if (meta) {
+        const value = `${name}${meta.suffix}`;
+        const entry = {
+            label: value,
+            value,
+            origId: name,
+            channel: meta.provider,
+            attr: { providerName: meta.provider, custom: true },
+            _source: meta.source,
+            _actualModel: name,
+            _custom: true,
+            display_value: sourceId === 'lsshirtai' ? value : (value.split("::").pop() || value),
+        };
+        if (sourceId === 'lsshirtai') entry._isToolSupported = false;
+        return entry;
+    }
+    const ch = state.channels[sourceId];
+    if (!ch) return null;
+    const value = `${name}【${ch.name}】`;
+    return {
+        label: value,
+        value,
+        origId: name,
+        channel: ch.name,
+        attr: { providerName: ch.name, custom: true },
+        _source: ch.name,
+        _actualModel: name,
+        _custom: true,
+        display_value: value,
+    };
+}
+
+function injectLocalCustomModel(sourceId, name) {
+    const entry = buildLocalCustomModelEntry(sourceId, name);
+    if (!entry) return;
+    const sourceKey = entry._source;
+    if (!state.models.some(m => m._source === sourceKey && (m.origId || m.value) === name)) {
+        state.models.push(entry);
+    }
+}
+
+window.addCustomChannelModel = async function() {
+    const sourceId = document.getElementById('modelsModal').dataset.activeSourceId;
+    if (!sourceId) return;
+    const input = document.getElementById('customModelNameInput');
+    const name = (input.value || "").trim();
+    if (!name) {
+        alert("请先输入要添加的模型名称。");
+        return;
+    }
+    if (name.includes("【") || name.includes("】")) {
+        alert("请直接填写裸模型名称，不要带【渠道】后缀。");
+        return;
+    }
+    const existing = getChannelCustomModels(sourceId);
+    if (existing.some(m => m.toLowerCase() === name.toLowerCase())) {
+        alert("该模型已在手动添加列表中。");
+        return;
+    }
+    if (!CUSTOM_MODEL_SOURCE_META[sourceId]) {
+        const upstream = state.models.find(m => m._source === channelSourceKey(sourceId) && (m.origId || m.value) === name);
+        if (upstream) {
+            alert("该模型已在上游模型列表中，无需手动添加。");
+            return;
+        }
+    }
+    try {
+        await saveChannelCustomModels(sourceId, [...existing, name]);
+        injectLocalCustomModel(sourceId, name);
+        input.value = "";
+        renderChannelModelChecklist();
+        renderGlobalModels(state.models);
+    } catch (e) {
+        alert("添加模型失败: " + e.message);
+    }
+}
+
+window.removeCustomChannelModel = async function(encodedSourceKey, encodedName) {
+    const sourceKey = decodeURIComponent(encodedSourceKey);
+    const name = decodeURIComponent(encodedName);
+    const sourceId = Object.keys(CUSTOM_MODEL_SOURCE_META).find(key => CUSTOM_MODEL_SOURCE_META[key].source === sourceKey)
+        || state.channels.findIndex(ch => ch.name === sourceKey);
+    if (sourceId === undefined || sourceId === -1 || sourceId === null) return;
+    if (!confirm(`确定移除手动添加的模型「${name}」？`)) return;
+    try {
+        const existing = getChannelCustomModels(sourceId);
+        await saveChannelCustomModels(sourceId, existing.filter(m => m !== name));
+        state.models = state.models.filter(m => !(m.attr && m.attr.custom && m._source === sourceKey && (m.origId || m.value) === name));
+        renderChannelModelChecklist();
+        renderGlobalModels(state.models);
+    } catch (e) {
+        alert("移除模型失败: " + e.message);
+    }
+}
+
+window.refreshChannelModelPool = async function(btn) {
+    const sourceId = document.getElementById('modelsModal').dataset.activeSourceId;
+    if (!sourceId) return;
+    const oldText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "获取中...";
+    try {
+        const payload = await requestJson("/admin/api/models?refresh=true");
+        state.models = Array.isArray(payload.data) ? payload.data : [];
+        renderGlobalModels(state.models);
+        renderChannelModelChecklist();
+        btn.textContent = "✅ 已更新";
+    } catch (e) {
+        alert("获取最新模型失败: " + e.message);
+        btn.textContent = oldText;
+    } finally {
+        btn.disabled = false;
+        setTimeout(() => {
+            if (btn.textContent === "✅ 已更新") btn.textContent = oldText;
+        }, 1500);
+    }
+}
+
 function renderChannelModelChecklist() {
     const sourceId = document.getElementById('modelsModal').dataset.activeSourceId;
     const isGptAll = sourceId === 'gptall';
@@ -823,15 +997,16 @@ function renderChannelModelChecklist() {
     const mode = document.getElementById('channelModelsMode').value;
     const meta = document.getElementById('channelModelsMeta');
     if (mode === 'blacklist') {
-        meta.textContent = "黑名单模式：勾选的模型将被禁用，通过 API 无法获取；取消勾选即恢复可用。未勾选任何模型 = 全量放通。";
+        meta.textContent = "黑名单模式：勾选的模型将被禁用，通过 API 无法获取；取消勾选即恢复可用。未勾选任何模型 = 全量放通。手动添加的模型仅受黑名单限制。";
     } else {
-        meta.textContent = "白名单模式：勾选的模型才允许使用；未勾选任何模型 = 全量放通渠道内的所有模型。";
+        meta.textContent = "白名单模式：勾选的模型才允许使用；未勾选任何模型 = 全量放通渠道内的所有模型。手动添加的模型无需勾选即可用。";
     }
 
     const filteredModels = getChannelFilteredModels(sourceId, isGptAll);
+    const customNames = getChannelCustomModels(sourceId);
     const clist = document.getElementById('channelModelsList');
     clist.innerHTML = "";
-    if (filteredModels.length === 0) {
+    if (filteredModels.length === 0 && customNames.length === 0) {
         clist.innerHTML = "<div class='muted'>该渠道当前未探测到有效的模型映射表，可能被关闭或密钥配错。</div>";
         return;
     }
@@ -853,6 +1028,34 @@ function renderChannelModelChecklist() {
         `;
         clist.appendChild(row);
     });
+
+    const sourceKey = channelSourceKey(sourceId);
+    if (customNames.length > 0) {
+        const divider = document.createElement("div");
+        divider.className = "muted";
+        divider.style = "font-size: 0.78rem; margin-top: 4px; padding: 2px 4px;";
+        divider.textContent = `手动添加的模型（${customNames.length}）：不参与上方勾选，直接可用，仅受黑名单限制。`;
+        clist.appendChild(divider);
+        customNames.forEach(name => {
+            const suffix = (CUSTOM_MODEL_SOURCE_META[sourceId] || {}).suffix || `【${sourceKey}】`;
+            const testId = `${name}${suffix}`;
+            const row = document.createElement("div");
+            row.className = "checklist-item";
+            row.style = "display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; border: 1px dashed var(--border-color); border-radius: 6px;";
+            row.dataset.searchTarget = name.toLowerCase();
+            row.innerHTML = `
+                <div style="display: flex; gap: 8px; align-items: center; min-width: 0;">
+                    <span style="font-weight: 500;">${escapeHtml(name)}</span>
+                    <small style="opacity: 0.7; flex-shrink: 0;">手动</small>
+                </div>
+                <div style="display: flex; gap: 6px; flex-shrink: 0;">
+                    <button type="button" class="ghost-button" onclick="openTestModal('${escapeHtml(testId)}')">🧪测试</button>
+                    <button type="button" class="ghost-button" onclick="removeCustomChannelModel('${encodeURIComponent(sourceKey)}', '${encodeURIComponent(name)}')">✕</button>
+                </div>
+            `;
+            clist.appendChild(row);
+        });
+    }
     filterChannelModels();
 }
 
@@ -868,6 +1071,8 @@ window.openChannelModelsModal = function(sourceId) {
     // Store sourceId globally to use it in Save button
     document.getElementById('modelsModal').dataset.activeSourceId = sourceId;
     document.getElementById('modelSearchInput').value = ""; // clear search
+    const customModelInput = document.getElementById('customModelNameInput');
+    if (customModelInput) customModelInput.value = "";
     
     const savedMode = window.localStorage.getItem(`ai8_model_mode_${sourceId}`) || 'whitelist';
     document.getElementById('channelModelsMode').value = savedMode === 'blacklist' ? 'blacklist' : 'whitelist';

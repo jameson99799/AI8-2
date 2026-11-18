@@ -53,6 +53,10 @@ const EDITABLE_FIELDS = [
     "lsshirtaiBlacklistedModels",
     "lsshirtaiRequestTimeoutMs",
     "lsshirtaiDeleteSessionAfterResponse",
+    "ai8CustomModels",
+    "gptallCustomModels",
+    "freegptCustomModels",
+    "lsshirtaiCustomModels",
 ];
 
 class RuntimeConfigStore {
@@ -157,6 +161,10 @@ class RuntimeConfigStore {
             lsshirtaiBlacklistedModels: this.runtimeConfig.lsshirtaiBlacklistedModels.join(","),
             lsshirtaiRequestTimeoutMs: this.runtimeConfig.lsshirtaiRequestTimeoutMs,
             lsshirtaiDeleteSessionAfterResponse: this.runtimeConfig.lsshirtaiDeleteSessionAfterResponse,
+            ai8CustomModels: this.runtimeConfig.ai8CustomModels.join(","),
+            gptallCustomModels: this.runtimeConfig.gptallCustomModels.join(","),
+            freegptCustomModels: this.runtimeConfig.freegptCustomModels.join(","),
+            lsshirtaiCustomModels: this.runtimeConfig.lsshirtaiCustomModels.join(","),
         };
     }
 
@@ -225,6 +233,10 @@ class RuntimeConfigStore {
             lsshirtaiBlacklistedModels: process.env.LSSHIRTAI_BLACKLISTED_MODELS,
             lsshirtaiRequestTimeoutMs: process.env.LSSHIRTAI_REQUEST_TIMEOUT_MS,
             lsshirtaiDeleteSessionAfterResponse: process.env.LSSHIRTAI_DELETE_SESSION_AFTER_RESPONSE,
+            ai8CustomModels: process.env.AI8_CUSTOM_MODELS,
+            gptallCustomModels: process.env.GPTALL_CUSTOM_MODELS,
+            freegptCustomModels: process.env.FREEGPT_CUSTOM_MODELS,
+            lsshirtaiCustomModels: process.env.LSSHIRTAI_CUSTOM_MODELS,
             ...defaults,
         };
     }
@@ -355,6 +367,10 @@ function normalizeConfig(source = {}) {
             source.lsshirtaiDeleteSessionAfterResponse ?? source.LSSHIRTAI_DELETE_SESSION_AFTER_RESPONSE,
             true
         ),
+        ai8CustomModels: parseCsv(source.ai8CustomModels ?? source.AI8_CUSTOM_MODELS ?? ""),
+        gptallCustomModels: parseCsv(source.gptallCustomModels ?? source.GPTALL_CUSTOM_MODELS ?? ""),
+        freegptCustomModels: parseCsv(source.freegptCustomModels ?? source.FREEGPT_CUSTOM_MODELS ?? ""),
+        lsshirtaiCustomModels: parseCsv(source.lsshirtaiCustomModels ?? source.LSSHIRTAI_CUSTOM_MODELS ?? ""),
     };
 }
 

@@ -37,7 +37,7 @@ const {
     openAiToAnthropicChunk,
     openAiToAnthropicResponse,
 } = require("./lib/anthropic-format");
-const { buildFreeGptClient, buildGptAllClient, buildLssClient, fetchAggregatedModels, isLssChatModel, proxyToCustomChannel, resolveTargetChannel, isBlacklisted } = require("./lib/channel-manager");
+const { buildFreeGptClient, buildGptAllClient, buildLssClient, fetchAggregatedModels, invalidateModelPool, isChannelCustomModel, isLssChatModel, proxyToCustomChannel, resolveTargetChannel, isBlacklisted } = require("./lib/channel-manager");
 const toolMarker = require("./lib/tool-marker");
 const { initHttpPool } = require("./lib/http-pool");
 
@@ -141,6 +141,18 @@ app.put("/admin/api/config", requireAdminAuth, (req, res) => {
     const nextConfig = configStore.updateConfig(patch);
 
     invalidateClient();
+    // Manual model lists and channels change which models exist in the
+    // aggregated pool, so that cache cannot be reused after such a change.
+    const CUSTOM_MODEL_KEYS = new Set([
+        "ai8CustomModels",
+        "gptallCustomModels",
+        "freegptCustomModels",
+        "lsshirtaiCustomModels",
+        "customChannels",
+    ]);
+    if (changedKeys.some(key => CUSTOM_MODEL_KEYS.has(key))) {
+        invalidateModelPool();
+    }
     setImmediate(prewarmCaches);
     announceAdminAccess("config_update");
 
@@ -172,6 +184,9 @@ app.put("/admin/api/channels", requireAdminAuth, (req, res) => {
     const channels = req.body;
     if (Array.isArray(channels)) {
         configStore.updateConfig({ customChannels: channels });
+        invalidateClient();
+        invalidateModelPool();
+        setImmediate(prewarmCaches);
     }
     res.json({ ok: true, data: getConfig().customChannels });
 });
@@ -471,7 +486,7 @@ async function handleChatCompletion(req, res, body) {
         return handleAi8DrawChatCompletion(req, res, body, config, client, chatDrawModel, chatBareModel);
     }
 
-    const resolvedModel = await client.resolveModel(actualModel);
+    const resolvedModel = await resolveAi8ModelWithCustomFallback(client, actualModel, config);
     const requestedTools = Array.isArray(body.tools) ? body.tools.filter(Boolean) : [];
     const toolSupported = resolvedModel?.attr?.capabilities?.tools === true;
     if (requestedTools.length > 0 && !toolSupported) {
@@ -518,6 +533,7 @@ async function handleChatCompletion(req, res, body) {
             maxToken: resolveSessionMaxToken(body.max_tokens, config),
             model: resolvedModel.value,
             preparedMessages,
+            resolvedModel,
             sessionPrompt,
             streamIncludeUsage: Boolean(body?.stream_options?.include_usage),
             temperature: body.temperature,
@@ -531,6 +547,7 @@ async function handleChatCompletion(req, res, body) {
         maxToken: resolveSessionMaxToken(body.max_tokens, config),
         model: resolvedModel.value,
         prompt: sessionPrompt.value,
+        resolvedModel,
         temperature: body.temperature,
     });
 
@@ -1134,6 +1151,7 @@ async function handleStreamingChatCompletion(req, res, options) {
         maxToken,
         model,
         preparedMessages,
+        resolvedModel,
         sessionPrompt,
         streamIncludeUsage,
         temperature,
@@ -1198,6 +1216,7 @@ async function handleStreamingChatCompletion(req, res, options) {
             maxToken,
             model,
             prompt: sessionPrompt.value,
+            resolvedModel,
             temperature,
         });
         sessionId = session?.id ?? null;
@@ -1444,6 +1463,9 @@ async function handleFreeGptChatCompletion(req, res, model, body, config) {
     const prompt = promptParts.filter(Boolean).join("\n\n");
 
     const actualModel = String(model || requestModel).trim();
+    const freegptResolvedModel = isChannelCustomModel(config, "freegpt", actualModel)
+        ? { value: actualModel }
+        : undefined;
 
     if (body.stream) {
         const abortController = new AbortController();
@@ -1476,6 +1498,7 @@ async function handleFreeGptChatCompletion(req, res, model, body, config) {
             await freegptClient.streamChatCompletion(
                 {
                     model: actualModel,
+                    resolvedModel: freegptResolvedModel,
                     text: prompt,
                     signal: abortController.signal,
                     timeoutMs: STREAM_TIMEOUT_MS,
@@ -1557,6 +1580,7 @@ async function handleFreeGptChatCompletion(req, res, model, body, config) {
         streamResult = await freegptClient.streamChatCompletion(
             {
                 model: actualModel,
+                resolvedModel: freegptResolvedModel,
                 text: prompt,
                 signal: abortController.signal,
                 timeoutMs: STREAM_TIMEOUT_MS,
@@ -1602,9 +1626,17 @@ async function handleLssChatCompletion(req, res, model, body, config) {
     const created = Math.floor(Date.now() / 1000);
     const completionId = randomId("chatcmpl");
     const requestModel = String(body.model || model || config.lsshirtaiDefaultModel || "").trim();
-    const resolvedModel = await lssClient.resolveModel(model || config.lsshirtaiDefaultModel);
-    if (!isLssChatModel(resolvedModel)) {
-        throw createHttpError(400, `Model "${resolvedModel.value}" is not a lsshirtai text chat model.`);
+    const requestedLssModel = String(model || config.lsshirtaiDefaultModel || "").trim();
+    let resolvedModel;
+    if (isChannelCustomModel(config, "lsshirtai", requestedLssModel)) {
+        // Manually added models are not in the upstream template; skip the
+        // catalog lookup and the chat-model filter for them.
+        resolvedModel = { value: requestedLssModel };
+    } else {
+        resolvedModel = await lssClient.resolveModel(requestedLssModel);
+        if (!isLssChatModel(resolvedModel)) {
+            throw createHttpError(400, `Model "${resolvedModel.value}" is not a lsshirtai text chat model.`);
+        }
     }
 
     // Tools are intentionally not matched for this channel. Claude Code will
@@ -1628,6 +1660,7 @@ async function handleLssChatCompletion(req, res, model, body, config) {
             maxToken,
             model: resolvedModel.value,
             preparedMessages,
+            resolvedModel,
             sessionPrompt,
             streamIncludeUsage: Boolean(body?.stream_options?.include_usage),
             temperature: body.temperature,
@@ -1641,6 +1674,7 @@ async function handleLssChatCompletion(req, res, model, body, config) {
         maxToken,
         model: resolvedModel.value,
         prompt: sessionPrompt.value,
+        resolvedModel,
         temperature: body.temperature,
     });
 
@@ -1749,6 +1783,10 @@ async function handleGptAllChatCompletion(req, res, model, body, config, resolve
     const created = Math.floor(Date.now() / 1000);
     const completionId = randomId("chatcmpl");
     const requestModel = String(body.model || model || config.gptallDefaultModel || "").trim();
+    const gptallModelName = actualModelForGptAll(model);
+    const gptallResolvedModel = isChannelCustomModel(config, "gptall", gptallModelName)
+        ? { value: gptallModelName }
+        : undefined;
 
     const requestedTools = Array.isArray(body.tools) ? body.tools.filter(Boolean) : [];
     const toolSupported = resolvedToolSupported === true;
@@ -1809,7 +1847,8 @@ async function handleGptAllChatCompletion(req, res, model, body, config, resolve
         try {
             const streamResult = await gptallClient.streamChatCompletion(
                 {
-                    model: actualModelForGptAll(model),
+                    model: gptallModelName,
+                    resolvedModel: gptallResolvedModel,
                     text: prompt,
                     signal: abortController.signal,
                     timeoutMs: STREAM_TIMEOUT_MS,
@@ -1956,7 +1995,8 @@ async function handleGptAllChatCompletion(req, res, model, body, config, resolve
 
 const streamResult = await gptallClient.streamChatCompletion(
             {
-                model: actualModelForGptAll(model),
+                model: gptallModelName,
+                resolvedModel: gptallResolvedModel,
                 text: prompt,
                 signal: abortController.signal,
                 timeoutMs: STREAM_TIMEOUT_MS,
@@ -2666,6 +2706,26 @@ function resolveSessionMaxToken(clientMaxTokens, config) {
         return Math.max(requested, floor);
     }
     return undefined;
+}
+
+/**
+ * Resolve an AI8 chat model, falling back to a pass-through entry for models
+ * the admin added manually (they may not exist in the upstream template yet).
+ * Tool support is treated as unknown (disabled) for such models.
+ */
+async function resolveAi8ModelWithCustomFallback(client, actualModel, config) {
+    try {
+        return await client.resolveModel(actualModel);
+    } catch (error) {
+        if (!isChannelCustomModel(config, "ai8", actualModel)) {
+            throw error;
+        }
+        logger.info("Using manually added AI8 model", { model: actualModel });
+        return {
+            value: actualModel,
+            attr: { capabilities: { tools: false } },
+        };
+    }
 }
 
 function resolveFinalContent(finalRecord, fallbackContent = "") {

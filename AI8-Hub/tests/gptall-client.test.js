@@ -391,6 +391,50 @@ test("streamChatCompletion creates a group, sets the model, sends groupId, and d
     assert.equal(capture.deleted.body.groupId, 777);
 });
 
+test("streamChatCompletion accepts a pre-resolved model for manually added models", async () => {
+    const client = createClient();
+    let resolveCalls = 0;
+    client.resolveModel = async () => {
+        resolveCalls++;
+        return { value: "unexpected", modelType: 1 };
+    };
+
+    const encoder = new TextEncoder();
+    const lines = [
+        JSON.stringify({ content: [{ type: "text", text: "ok" }], text: "ok" }),
+        JSON.stringify({ content: "{}", finishReason: "success", chatId: 9, data: { content: "{}", llm: { response: "ok" } } }),
+    ];
+    const capture = {};
+    mockGroupFlow(
+        client,
+        {
+            ok: true,
+            status: 200,
+            headers: { get: () => "application/octet-stream" },
+            body: new ReadableStream({
+                start(controller) {
+                    for (const line of lines) {
+                        controller.enqueue(encoder.encode(`${line}\n`));
+                    }
+                    controller.close();
+                },
+            }),
+        },
+        capture
+    );
+
+    const result = await client.streamChatCompletion(
+        { model: "my-custom-model", resolvedModel: { value: "my-custom-model" }, text: "hi" },
+        {}
+    );
+
+    assert.equal(resolveCalls, 0);
+    assert.equal(capture.chat.body.model, "my-custom-model");
+    assert.equal(capture.chat.body.modelName, "my-custom-model");
+    assert.equal(capture.chat.body.modelType, 1);
+    assert.equal(result.record.content, "ok");
+});
+
 test("deleteGroupAfterResponse=false keeps the group", async () => {
     const client = createClient();
     client.deleteGroupAfterResponse = false;

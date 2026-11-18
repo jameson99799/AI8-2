@@ -166,7 +166,11 @@ class FreeGptClient {
     }
 
     async streamChatCompletion(options = {}, handlers = {}) {
-        const model = await this.resolveModel(options.model);
+        // A pre-resolved model (e.g. a manually added model name) skips the
+        // catalog lookup, which would reject models missing from the list.
+        const model = options.resolvedModel && options.resolvedModel.value
+            ? options.resolvedModel
+            : await this.resolveModel(options.model);
         const messages = Array.isArray(options.messages) && options.messages.length > 0
             ? options.messages
             : [{ role: "user", content: options.text || "" }];

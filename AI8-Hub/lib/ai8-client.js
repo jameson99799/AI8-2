@@ -482,7 +482,11 @@ class AI8Client {
     }
 
     async createSession(options = {}) {
-        const resolvedModel = await this.resolveModel(options.model);
+        // A pre-resolved model (e.g. a manually added model name) skips the
+        // catalog lookup, which would reject models missing from the template.
+        const resolvedModel = options.resolvedModel && options.resolvedModel.value
+            ? options.resolvedModel
+            : await this.resolveModel(options.model);
         const payload = {
             mcp: Array.isArray(options.mcp) ? options.mcp : [],
             model: resolvedModel.value,

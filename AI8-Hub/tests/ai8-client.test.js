@@ -12,6 +12,35 @@ function createClient() {
     });
 }
 
+test("createSession uses a pre-resolved model for manually added models", async () => {
+    const client = createClient();
+    let resolveCalls = 0;
+    client.resolveModel = async () => {
+        resolveCalls++;
+        throw new Error("resolveModel must not be called for pre-resolved models");
+    };
+
+    const captured = {};
+    client.requestJson = async (reqPath, options) => {
+        captured.path = reqPath;
+        captured.options = options;
+        return { id: 5, model: "my-custom-model", uid: 1 };
+    };
+
+    const session = await client.createSession({
+        model: "my-custom-model",
+        resolvedModel: { value: "my-custom-model" },
+        prompt: "hi",
+    });
+
+    assert.equal(resolveCalls, 0);
+    assert.equal(captured.path, "/chat/session");
+    assert.equal(captured.options.method, "POST");
+    assert.equal(captured.options.body.model, "my-custom-model");
+    assert.equal(captured.options.body.prompt, "hi");
+    assert.equal(session.id, 5);
+});
+
 test("AI8 auth-expired business errors are normalized to 401 even when upstream HTTP status is 200", () => {
     const client = createClient();
 

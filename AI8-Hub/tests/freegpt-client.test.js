@@ -128,6 +128,36 @@ test("streamChatCompletion parses SSE chunks and accumulates content", async () 
     assert.equal(done, true);
 });
 
+test("streamChatCompletion accepts a pre-resolved model for manually added models", async () => {
+    const client = createClient();
+    let resolveCalls = 0;
+    client.resolveModel = async () => {
+        resolveCalls++;
+        return { value: "unexpected" };
+    };
+    client._getChallenge = async () => makeChallenge();
+
+    const body = sseResponse([
+        { id: "chatcmpl-1", object: "chat.completion.chunk", choices: [{ index: 0, delta: { content: "Hi" }, finish_reason: null }] },
+        { id: "chatcmpl-1", object: "chat.completion.chunk", choices: [{ index: 0, delta: {}, finish_reason: "stop" }] },
+    ]);
+
+    let sentModel = "";
+    client._fetch = async (path, options) => {
+        sentModel = options.body.model;
+        return makeStreamResponse(body);
+    };
+
+    const result = await client.streamChatCompletion(
+        { model: "my-custom-model", resolvedModel: { value: "my-custom-model" }, messages: [{ role: "user", content: "hi" }] },
+        {}
+    );
+
+    assert.equal(resolveCalls, 0);
+    assert.equal(sentModel, "my-custom-model");
+    assert.equal(result.content, "Hi");
+});
+
 test("streamChatCompletion normalizes upstream errors to an Error with status", async () => {
     const client = createClient();
     client.resolveModel = async () => ({ value: "gpt-4o-mini", label: "GPT-4o Mini" });
