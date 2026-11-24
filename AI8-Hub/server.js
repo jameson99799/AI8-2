@@ -1235,17 +1235,11 @@ async function handleStreamingChatCompletion(req, res, options) {
             error: error?.message || String(error),
             model,
         });
+        // The SSE head is already sent, so the real upstream failure has to
+        // travel inside the stream; a bare end would leave the client with an
+        // empty answer and no finish reason.
         if (!res.writableEnded) {
-            writeSse(
-                res,
-                buildChatCompletionChunk({
-                    created,
-                    delta: {},
-                    finishReason: "stop",
-                    id: completionId,
-                    model,
-                })
-            );
+            res.write(buildSseErrorEvent(error, model));
             res.write("data: [DONE]\n\n");
             res.end();
         }
@@ -1322,7 +1316,21 @@ async function handleStreamingChatCompletion(req, res, options) {
             return;
         }
 
-        throw error;
+        // Headers are already sent, so rethrowing would just truncate the
+        // stream (clients then only see "stream ended without a finish
+        // reason") while the real upstream message stays in the log. Relay it
+        // inside the stream instead.
+        logger.warn("AI8 stream failed", {
+            error: error?.message || String(error),
+            model,
+            status: error?.status,
+        });
+        if (!res.writableEnded) {
+            res.write(buildSseErrorEvent(error, model));
+            res.write("data: [DONE]\n\n");
+            res.end();
+        }
+        return;
     }
 
     let finalContent = resolveFinalContent(finalRecord, streamedContent);
@@ -2084,22 +2092,16 @@ function gptAllFailureInfo(record) {
 }
 
 function buildSseErrorEvent(error, model) {
-    const message = error?.message || "gpt-all request failed.";
+    // Keep this frame error-only: SSE consumers that validate chunks against
+    // the OpenAI schema (e.g. Cherry Studio's AI SDK) strip unknown keys from
+    // a `choices` frame, which would swallow the message below. An error-only
+    // frame is recognized as a stream error and surfaces the message verbatim.
+    const detail = error?.message || "Upstream request failed.";
+    void model;
     return `data: ${JSON.stringify({
-        choices: [
-            {
-                delta: {},
-                finish_reason: "error",
-                index: 0,
-            },
-        ],
-        created: Math.floor(Date.now() / 1000),
         error: {
-            message,
+            message: `上游异常：${detail}`,
         },
-        id: randomId("chatcmpl"),
-        model: model || "",
-        object: "chat.completion.chunk",
     })}\n\n`;
 }
 
