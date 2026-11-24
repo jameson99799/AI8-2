@@ -72,6 +72,8 @@ AI8_CONFIG_PATH=./data/config.json
 AI8_LOG_PATH=./logs/ai8-adapter.log
 ```
 
+`AI8_BASE_URL` should stay pointed at the AI8 web app (`https://ai8.rcouyi.com/api`). When the service rotates its API gateway host, that URL starts answering with the web page instead of JSON; the client then reads the current gateway from the site's front-end bundle and retries automatically, so a gateway move does not require a config change.
+
 Optional gpt-all channel (independent channel, models get the `【gpt-all】` suffix):
 
 ```env

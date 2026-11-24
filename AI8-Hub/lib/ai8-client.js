@@ -246,9 +246,82 @@ function buildDrawArgs({ model, version, size, outputMax, quality, images }) {
     return args;
 }
 
+const API_BASE_DISCOVERY_TIMEOUT_MS = 8000;
+const API_BASE_DISCOVERY_COOLDOWN_MS = 5 * 60 * 1000;
+const API_GATEWAY_URL_PATTERN = /https?:\/\/api-[a-z0-9-]+(?:\.[a-z0-9-]+)+\/api\b/gi;
+const API_BASE_DISCOVERY_USER_AGENT =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/132.0.0.0 Safari/537.36";
+
+function isHtmlResponse(response) {
+    const contentType = String(response?.headers?.get?.("content-type") || "").toLowerCase();
+    return contentType.includes("text/html") || contentType.includes("application/xhtml");
+}
+
+async function fetchTextQuietly(url) {
+    try {
+        const response = await fetch(url, {
+            headers: {
+                "user-agent": API_BASE_DISCOVERY_USER_AGENT,
+                accept: "text/html,application/javascript,*/*",
+            },
+            signal: AbortSignal.timeout(API_BASE_DISCOVERY_TIMEOUT_MS),
+        });
+        if (!response.ok) {
+            return "";
+        }
+        return await response.text();
+    } catch {
+        return "";
+    }
+}
+
+function findApiGatewayUrl(text) {
+    if (!text) {
+        return null;
+    }
+
+    API_GATEWAY_URL_PATTERN.lastIndex = 0;
+    const match = API_GATEWAY_URL_PATTERN.exec(text);
+    return match ? match[0].replace(/\/+$/, "") : null;
+}
+
+/**
+ * The AI8 web app keeps a stable domain and loads its API gateway host from
+ * the front-end bundle. When the gateway rotates, the old base URL starts
+ * answering with the SPA HTML, so read the current gateway from the bundle.
+ */
+async function discoverApiBaseUrlFromSite(origin) {
+    const html = await fetchTextQuietly(`${origin}/`);
+    const inlineGateway = findApiGatewayUrl(html);
+    if (inlineGateway) {
+        return inlineGateway;
+    }
+
+    const scriptUrls = [];
+    for (const match of html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)) {
+        try {
+            scriptUrls.push(new URL(match[1], origin).toString());
+        } catch {
+            // Ignore malformed script src values.
+        }
+    }
+
+    for (const scriptUrl of scriptUrls.slice(0, 12)) {
+        const gateway = findApiGatewayUrl(await fetchTextQuietly(scriptUrl));
+        if (gateway) {
+            return gateway;
+        }
+    }
+
+    return null;
+}
+
 class AI8Client {
     constructor(options = {}) {
         this.baseUrl = String(options.baseUrl || "https://ai8.rcouyi.com/api").replace(/\/+$/, "");
+        this._resolvedApiBaseUrl = null;
+        this._apiBaseDiscoveryTask = null;
+        this._apiBaseDiscoveryFailedAt = 0;
         this.authToken = String(options.authToken || "").trim();
         this.xAppVersion = String(options.xAppVersion || "3.0.1").trim();
         this.defaultModel = String(options.defaultModel || "").trim();
@@ -816,15 +889,64 @@ class AI8Client {
 
     async requestJson(path, options = {}) {
         const response = await this._fetch(path, options);
-        const payload = await response.json().catch(async () => {
-            throw this._buildError(`AI8 returned a non-JSON response for ${path}: ${await response.text()}`, 502);
-        });
+
+        let payload;
+        if (typeof response.text !== "function") {
+            // Test doubles / minimal response objects may only expose json().
+            payload = await response.json();
+        } else {
+            const text = await response.text();
+            try {
+                payload = JSON.parse(text);
+            } catch {
+                throw this._buildError(
+                    `AI8 returned a non-JSON response for ${path}: ${text.slice(0, 200)}`,
+                    502
+                );
+            }
+        }
 
         if (!response.ok || payload?.code !== 0) {
             throw this._normalizeError(payload, response.status);
         }
 
         return payload.data;
+    }
+
+    async _discoverApiBaseUrl() {
+        if (this._resolvedApiBaseUrl) {
+            return null;
+        }
+
+        if (this._apiBaseDiscoveryTask) {
+            return this._apiBaseDiscoveryTask;
+        }
+
+        if (Date.now() - this._apiBaseDiscoveryFailedAt < API_BASE_DISCOVERY_COOLDOWN_MS) {
+            return null;
+        }
+
+        this._apiBaseDiscoveryTask = (async () => {
+            let discovered = null;
+            try {
+                discovered = await discoverApiBaseUrlFromSite(new URL(this.baseUrl).origin);
+            } catch {
+                discovered = null;
+            }
+
+            if (!discovered || discovered === this.baseUrl) {
+                this._apiBaseDiscoveryFailedAt = Date.now();
+                return null;
+            }
+
+            return discovered;
+        })();
+
+        try {
+            return await this._apiBaseDiscoveryTask;
+        } finally {
+            this._apiBaseDiscoveryTask = null;
+        }
     }
 
     async _fetch(path, options = {}) {
@@ -836,17 +958,6 @@ class AI8Client {
             signal,
             timeoutMs = this.requestTimeoutMs,
         } = options;
-
-        const url = new URL(path.replace(/^\/+/, ""), `${this.baseUrl}/`);
-        if (query && typeof query === "object") {
-            for (const [key, value] of Object.entries(query)) {
-                if (value === undefined || value === null || value === "") {
-                    continue;
-                }
-
-                url.searchParams.set(key, String(value));
-            }
-        }
 
         const requestHeaders = {
             Authorization: this.authToken,
@@ -872,12 +983,43 @@ class AI8Client {
             ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)])
             : AbortSignal.timeout(timeoutMs);
 
-        return fetch(url, {
-            body: requestBody,
-            headers: requestHeaders,
-            method,
-            signal: mergedSignal,
-        });
+        const send = () => {
+            const url = new URL(path.replace(/^\/+/, ""), `${this._resolvedApiBaseUrl || this.baseUrl}/`);
+            if (query && typeof query === "object") {
+                for (const [key, value] of Object.entries(query)) {
+                    if (value === undefined || value === null || value === "") {
+                        continue;
+                    }
+
+                    url.searchParams.set(key, String(value));
+                }
+            }
+
+            return fetch(url, {
+                body: requestBody,
+                headers: requestHeaders,
+                method,
+                signal: mergedSignal,
+            });
+        };
+
+        const response = await send();
+        if (!isHtmlResponse(response) || typeof requestBody?.pipe === "function") {
+            return response;
+        }
+
+        // The configured base URL answered with a page instead of the JSON API
+        // (AI8 moved its API to a new gateway host). Recover by reading the
+        // current gateway out of the web app's bundle, then retry once.
+        const discoveredBaseUrl = await this._discoverApiBaseUrl();
+        if (!discoveredBaseUrl) {
+            return response;
+        }
+
+        this._resolvedApiBaseUrl = discoveredBaseUrl;
+        // Release the discarded page body so the socket is not left hanging.
+        response.body?.cancel?.().catch?.(() => {});
+        return send();
     }
 
     async _readUnexpectedPayload(response) {
