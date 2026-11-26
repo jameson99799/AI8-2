@@ -246,13 +246,63 @@ class RuntimeConfigStore {
             return {};
         }
 
+        let content;
         try {
-            const content = fs.readFileSync(this.storePath, "utf8");
-            const parsed = JSON.parse(content);
-            return parsed && typeof parsed === "object" ? parsed : {};
+            content = fs.readFileSync(this.storePath, "utf8");
         } catch (error) {
+            console.error(`[ai8-config] could not read ${this.storePath}: ${error.message}`);
             return {};
         }
+
+        // Windows editors commonly save with a UTF-8 BOM, which JSON.parse rejects.
+        const cleaned = content.replace(/^\uFEFF/, "").trim();
+        if (!cleaned) {
+            return {};
+        }
+
+        try {
+            const parsed = JSON.parse(cleaned);
+            return parsed && typeof parsed === "object" ? parsed : {};
+        } catch (error) {
+            return this._recoverFromUnreadableConfig(content, error);
+        }
+    }
+
+    // A configuration that cannot be parsed must never be silently discarded:
+    // every UI-configured setting (whitelists, blacklists, manual models,
+    // channels) lives in this file. Keep the broken content aside for manual
+    // recovery and fall back to the last good backup before starting empty.
+    _recoverFromUnreadableConfig(content, parseError) {
+        const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const quarantinedPath = `${this.storePath}.invalid-${stamp}.json`;
+        try {
+            fs.writeFileSync(quarantinedPath, content, "utf8");
+            console.error(
+                `[ai8-config] ${this.storePath} is not valid JSON (${parseError.message}). ` +
+                `The broken file was preserved as ${quarantinedPath} for manual recovery.`
+            );
+        } catch (quarantineError) {
+            console.error(
+                `[ai8-config] ${this.storePath} is not valid JSON (${parseError.message}) and ` +
+                `preserving it failed: ${quarantineError.message}`
+            );
+        }
+
+        const backupPath = `${this.storePath}.bak`;
+        try {
+            if (fs.existsSync(backupPath)) {
+                const parsed = JSON.parse(fs.readFileSync(backupPath, "utf8").replace(/^\uFEFF/, ""));
+                if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
+                    console.error(`[ai8-config] continuing with the last good configuration from ${backupPath}.`);
+                    return parsed;
+                }
+            }
+        } catch (backupError) {
+            console.error(`[ai8-config] the backup ${backupPath} is unusable too: ${backupError.message}`);
+        }
+
+        console.error("[ai8-config] starting with the default configuration.");
+        return {};
     }
 
     _resolveRuntimeConfig() {
@@ -266,7 +316,25 @@ class RuntimeConfigStore {
 
     _writeOverrideFile(content) {
         fs.mkdirSync(path.dirname(this.storePath), { recursive: true });
-        fs.writeFileSync(this.storePath, JSON.stringify(content, null, 2));
+
+        // Keep the last good version so a corrupted write (or a bad manual edit
+        // followed by a save) can still be recovered.
+        try {
+            if (fs.existsSync(this.storePath)) {
+                const current = fs.readFileSync(this.storePath, "utf8");
+                JSON.parse(current.replace(/^\uFEFF/, ""));
+                fs.copyFileSync(this.storePath, `${this.storePath}.bak`);
+            }
+        } catch {
+            // The current file is not valid JSON anyway; the recovery path
+            // preserves it on the next boot.
+        }
+
+        // Write via temp file + rename so a crash mid-write can never leave a
+        // truncated configuration behind.
+        const tempPath = `${this.storePath}.tmp-${process.pid}`;
+        fs.writeFileSync(tempPath, JSON.stringify(content, null, 2), "utf8");
+        fs.renameSync(tempPath, this.storePath);
     }
 }
 
